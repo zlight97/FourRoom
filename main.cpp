@@ -1,11 +1,10 @@
 #include <iostream>
-#include "SIR.h"
+#include "FourRoom.h"
 
 using namespace std;
 
 int main(int argc, char* argv[])
 {
-    cout<<"Starting Simulation:\n";
 
     //This block sets up the options for debugging, and ignoring the sliding window END condition
     char val = '0';
@@ -15,6 +14,7 @@ int main(int argc, char* argv[])
     bool dontEnd = val=='2'||val=='3';
     
 
+    cout<<"Starting Simulation:\n";
     RunSimulation(debug,dontEnd);
     return 0;
 }

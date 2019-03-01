@@ -1,7 +1,7 @@
 SOURCES := $(shell echo $(./)*.cpp)
 DEPENDS = $(SOURCES:.cpp=.d)
 OBJECTS = $(SOURCES:.cpp=.o)
-PROGRAM = SIR
+PROGRAM = FourRooms
 
 #######################################################################
 
