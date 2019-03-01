@@ -3,6 +3,9 @@
 #include <WMtk.h>
 #include <vector>
 
+//ideally once this is done it should be written in a manner that roomSize 
+//can be changed and everything should scale 
+//(currently not the case as walls are hardcoded)
 const int roomSize = 5;
 const int totalSize = (roomSize*2)+2;
 const int keyX = totalSize-3;
@@ -10,6 +13,7 @@ const int keyY = totalSize-roomSize;
 const int lockX = 4;
 const int lockY = totalSize-2;
 
+//Each tile has a type dicated by this enum
 enum Tile
 {
     AGENT,
@@ -29,7 +33,7 @@ public:
     bool moveDown();
     bool moveLeft();
     bool moveRight();
-    int getAgentX() {return agentX; }
+    int getAgentX() { return agentX; }
     int getAgentY() { return agentY; }
     bool getSuccess() { return success; }
     bool hasKey() { return acquiredKey; }
@@ -46,6 +50,9 @@ private:
 // performs the simulation.
 void RunSimulation(bool verbose=false, bool end=false);
 
-void initState(state &s);
+//This outputs the string equivilent from a Tile
+string getTileName(Tile t);
+
+//Prints the map in cout
 void printMap(state s);
 #endif

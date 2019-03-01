@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <vector>
 
+//macros that simplified writting the state class
 #define atActor info.at(agentY)[agentX]
 #define upActor info.at(agentY-1)[agentX]
 #define downActor info.at(agentY+1)[agentX]
@@ -12,6 +13,20 @@
 
 using namespace std;
 
+/*
+ * How will the Higharchy work?
+ * Top layer:
+ * Recieves reward from getting key and lock (-1 for each step)
+ * Needs to learn how to dictate waypoints to lower level (doors, key, and lock)
+ * State function gives location of actor, (x,y) and nothing else
+ * 
+ * Bottom Layer:
+ * Forced 1 size memory
+ * Chooses a direction (Up down left right) -> These are it's Direction Chunks
+ * Reward is dictated by higher level (I don't know how to do this yet) (-1 for each step could also go here)
+ * Needs to learn how to navigate to waypoints dicated by higher level
+ * State function is the same as higher level? Maybe chould be changed to incorperate waypoints, but I'm not sure how that would work
+ */
 string getTileName(Tile t)
 {
     switch(t)
@@ -87,6 +102,14 @@ void RunSimulation(bool verbose, bool end)
     printMap(current_state);
 }
 
+
+
+
+
+
+
+
+//State Class Functions:
 void state::initState()
 {
     for(int i = 0; i<totalSize; i++)
@@ -132,7 +155,6 @@ void state::initState()
     info.at(roomSize+5)[roomSize] = EMPTY;
     
 }
-
 
 bool state::moveUp()
 {
