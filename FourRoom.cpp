@@ -79,15 +79,42 @@ void printMap(state s)
 
 void RunSimulation(bool verbose, bool end)
 {
+
+    // double finished_percentage = .99;
+    int number_of_trials = 10000;
+
+    //this block holds the settings for the success window
+    // int window_size = 20;//this will succed with higher values, though it will take a longer time
+    // double goodness = 0.;
+    // int goodness_index = 0;
+    // int window[window_size];
+    // int q; //counter for sliding window
+    // for(q=0;q<window_size;q++) //initilizing window
+    //     window[q]=0;
+
+    // int wm_size = 3;//Setting this to 1 makes the task MUCH simpler, as it is, the AI must learn to keep only 1 object in memory
+    int state_feature_vector_size = 2*totalSize;
+    // int chunk_feature_vector_size = 6;
+    // double lrate = .01;
+    // double lambda = .7;
+    // double ngamma = .99;
+    // double exploration_percentage = .01;//learns faster with ~.05, but more consistant with .01
     time_t random_seed = time(NULL);
     srand(random_seed);
     srand48(random_seed);
+    cerr<< "Random Seed is: "<<random_seed<<"\n";
+    state current_state;//this is the state data-type
+    bool use_actor = false;//this isn't implemented in WMTK
+    OR_CODE or_code = NOISY_OR;//read WMTK's FeatureVector.h for more info
+                               //I would get best results with NOISY, then MAX, then NO
 
-    state current_state;
+
     current_state.initState();
     char c = '1';
     while(c!='0')
     {
+        distanceClear d = current_state.getDistanceClear();
+        cout<<d.up<<" "<<d.down<<" "<<d.left<<" "<<d.right<<endl;
         printMap(current_state);
         cin>>c;
         if(c=='w')
@@ -102,7 +129,44 @@ void RunSimulation(bool verbose, bool end)
     printMap(current_state);
 }
 
+/*
+ * This is layed out in a manner that should give a spread based on available options
+ * 1 is where we are, .6 is where we can move .3 is where we can move in 2 moves
+ * Shown by this graphic:
+ * 0  0 .3  0  0
+ * 0 .3 .6 .3  0
+ *.3 .6  1 .6 .3
+ * 0 .3 .6 .3  0
+ * 0  0 .3  0  0
+ */
+void stateFunctionBoth(FeatureVector& fv, WorkingMemory& wm)
+{
+    fv.clearVector();
+    state *current_state =(state*) wm.getStateDataStructure();
+    int x = current_state->agentX;
+    int y = current_state->agentY;
+    fv.setValue(x,1.);
+    fv.setValue(y,1.);
+    distanceClear c = current_state->getDistanceClear();
+    //DIAGNOLS are not yet implemnted
+    if(c.left>=1)
+        fv.setValue(x-1,.6);
+    if(c.left>=2)
+        fv.setValue(x-2,.3);
+    if(c.right>=1)
+        fv.setValue(x+1,.6);
+    if(c.right>=2)
+        fv.setValue(x+2,.3);
+    if(c.up>=1)
+        fv.setValue(y-1,.6);
+    if(c.up>=2)
+        fv.setValue(y-2,.3);
+    if(c.down>=1)
+        fv.setValue(y+1,.6);
+    if(c.down>=2)
+        fv.setValue(y+2,.3);
 
+}
 
 
 
@@ -294,4 +358,64 @@ Tile state::getAgentTileData()
     if(agentY==keyY&&agentX==keyX)
         return KEY;
     return EMPTY;
+}
+
+distanceClear state::getDistanceClear()
+{
+    distanceClear ret;
+
+    //Top
+    if(agentY<2)
+    {
+        if(agentY==1&&upActor==WALL)
+            ret.up = 0;
+        else ret.up = agentY;
+    }
+    else if(upActor==WALL)
+        ret.up = 0;
+    else if(info[agentY-2][agentX]==WALL)
+        ret.up = 1;
+    else ret.up = 2;
+
+//Bottom
+    if(agentY>totalSize-3)
+    {
+        if(agentY==totalSize-2&&downActor==WALL)
+            ret.down = 0;
+        else ret.down = totalSize-agentY-1;
+    }
+    else if(downActor==WALL)
+        ret.down = 0;
+    else if(info[agentY+2][agentX]==WALL)
+        ret.down = 1;
+    else ret.down = 2;
+
+//Left side
+    if(agentX<2)
+    {
+        if(agentX==1&&leftActor==WALL)
+            ret.left = 0;
+        else ret.left = agentX;
+    }
+    else if(leftActor==WALL)
+        ret.left = 0;
+    else if(info[agentY][agentX-2]==WALL)
+        ret.left = 1;
+    else ret.left = 2;
+
+//Right Side
+    if(agentX>totalSize-3)
+    {
+        if(agentX==totalSize-2&&rightActor==WALL)
+            ret.right = 0;
+        else ret.right = totalSize-agentX-1;
+    }
+    else if(rightActor==WALL)
+        ret.right = 0;
+    else if(info[agentY][agentX+2]==WALL)
+        ret.right = 1;
+    else ret.right = 2;
+
+
+    return ret;
 }

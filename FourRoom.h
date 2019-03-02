@@ -23,6 +23,24 @@ enum Tile
     EMPTY
 };
 
+//Direction type for navigation chunks (lower level)
+enum Direction
+{
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    INVALID
+};
+
+struct distanceClear
+{
+    int up=0;
+    int down=0;
+    int left=0;
+    int right=0;
+};
+
 //This holds all of the state data that is used to determine what is currently happening
 class state
 {
@@ -33,6 +51,7 @@ public:
     bool moveDown();
     bool moveLeft();
     bool moveRight();
+    distanceClear getDistanceClear();
     int getAgentX() { return agentX; }
     int getAgentY() { return agentY; }
     bool getSuccess() { return success; }
@@ -52,7 +71,14 @@ void RunSimulation(bool verbose=false, bool end=false);
 
 //This outputs the string equivilent from a Tile
 string getTileName(Tile t);
-
 //Prints the map in cout
 void printMap(state s);
+
+//Both AI
+void stateFunctionBoth(FeatureVector& fv, WorkingMemory& wm);
+
+//Higher Level:
+
+//Lower Level:
+
 #endif
