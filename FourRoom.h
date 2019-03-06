@@ -56,6 +56,7 @@ public:
     int getAgentY() { return agentY; }
     bool getSuccess() { return success; }
     bool hasKey() { return acquiredKey; }
+    double checkLocation();
 private:
     bool acquiredKey = false;
     bool success = false;

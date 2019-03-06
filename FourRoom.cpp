@@ -92,7 +92,7 @@ void RunSimulation(bool verbose, bool end)
     // for(q=0;q<window_size;q++) //initilizing window
     //     window[q]=0;
 
-    // int wm_size = 3;//Setting this to 1 makes the task MUCH simpler, as it is, the AI must learn to keep only 1 object in memory
+    int wm_size = 3;
     int state_feature_vector_size = 2*totalSize;
     // int chunk_feature_vector_size = 6;
     // double lrate = .01;
@@ -143,12 +143,12 @@ void stateFunctionBoth(FeatureVector& fv, WorkingMemory& wm)
 {
     fv.clearVector();
     state *current_state =(state*) wm.getStateDataStructure();
-    int x = current_state->agentX;
-    int y = current_state->agentY;
+    int x = current_state->getAgentX();
+    int y = current_state->getAgentY();
     fv.setValue(x,1.);
     fv.setValue(y,1.);
     distanceClear c = current_state->getDistanceClear();
-    //DIAGNOLS are not yet implemnted
+    //DIAGNOLS are not yet implemnted - this cant handle that I don't think
     if(c.left>=1)
         fv.setValue(x-1,.6);
     if(c.left>=2)
@@ -360,11 +360,26 @@ Tile state::getAgentTileData()
     return EMPTY;
 }
 
+double state::checkLocation()
+{//this will be used to determine the given reward to the upper level while updating state info
+    if(atActor.getAgentTileData() == KEY && !hasKey())
+    {
+        acquiredKey = 1;
+        return 20.;
+    }
+    if(atActor.getAgentTileData()==LOCK && hasKey())
+    {
+        success = 1;
+        return 100.;
+    }
+    return -1.;
+}
+
 distanceClear state::getDistanceClear()
 {
+//Top
     distanceClear ret;
 
-    //Top
     if(agentY<2)
     {
         if(agentY==1&&upActor==WALL)
