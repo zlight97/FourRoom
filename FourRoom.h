@@ -33,6 +33,12 @@ enum Direction
     INVALID
 };
 
+struct Goal
+{
+    int x;
+    int y;
+};
+
 struct distanceClear
 {
     int up=0;
@@ -52,14 +58,20 @@ public:
     bool moveLeft();
     bool moveRight();
     distanceClear getDistanceClear();
+    double checkLocation();
     int getAgentX() { return agentX; }
     int getAgentY() { return agentY; }
     bool getSuccess() { return success; }
     bool hasKey() { return acquiredKey; }
-    double checkLocation();
+    bool goalReached() {return reachedGoal;}
+    void atGoal() {reachedGoal = 1;}
+    void setGoal(int x, int y) {currentGoal.x = x; currentGoal.y = y; reachedGoal = 0;}
+    Goal getCurrentGoal() {return currentGoal;}
 private:
+    Goal currentGoal;
     bool acquiredKey = false;
     bool success = false;
+    bool reachedGoal = false;
     Tile getAgentTileData();
     int agentX;
     int agentY;
@@ -76,10 +88,16 @@ string getTileName(Tile t);
 void printMap(state s);
 
 //Both AI
-void stateFunctionBoth(FeatureVector& fv, WorkingMemory& wm);
+void deleteChunkFunction(Chunk& chk);
 
 //Higher Level:
+void upperStateFunction(FeatureVector& fv, WorkingMemory& wm);
+double upperRewardFunction(WorkingMemory& wm);
+void upperChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
 
 //Lower Level:
+void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm);
+double lowerRewardFunction(WorkingMemory& wm);
+void lowerChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
 
 #endif

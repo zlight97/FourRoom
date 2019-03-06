@@ -92,21 +92,25 @@ void RunSimulation(bool verbose, bool end)
     // for(q=0;q<window_size;q++) //initilizing window
     //     window[q]=0;
 
-    int wm_size = 3;
+    int lower_wm_size = 1;
+    int upper_wm_size = 1;
+    int lower_chunk_feature_vector_size = 4;
+    int upper_chunk_feature_vector_size = 2*totalSize;
+
+    //these values go for both
     int state_feature_vector_size = 2*totalSize;
-    // int chunk_feature_vector_size = 6;
-    // double lrate = .01;
-    // double lambda = .7;
-    // double ngamma = .99;
-    // double exploration_percentage = .01;//learns faster with ~.05, but more consistant with .01
+    double lrate = .01;
+    double lambda = .7;
+    double ngamma = .99;
+    double exploration_percentage = .01;//learns faster with ~.05, but more consistant with .01
+    OR_CODE or_code = NOISY_OR;
+    state current_state;//this is the state data-type
+
     time_t random_seed = time(NULL);
     srand(random_seed);
     srand48(random_seed);
     cerr<< "Random Seed is: "<<random_seed<<"\n";
-    state current_state;//this is the state data-type
     bool use_actor = false;//this isn't implemented in WMTK
-    OR_CODE or_code = NOISY_OR;//read WMTK's FeatureVector.h for more info
-                               //I would get best results with NOISY, then MAX, then NO
 
 
     current_state.initState();
@@ -129,6 +133,31 @@ void RunSimulation(bool verbose, bool end)
     printMap(current_state);
 }
 
+
+double upperRewardFunction(WorkingMemory& wm)
+{
+    state *current_state = (state*) wm.getStateDataStructure();
+    double d = current_state->checkLocation();//could be a better way to lay this out
+    if(d<0&&wm.getNumberOfChunks()==0)//this is to quickly tech it to keep a chunk in memory
+        return -100.;
+    return d;
+}
+
+
+double lowerRewardFunction(WorkingMemory& wm)
+{
+    state *current_state = (state*) wm.getStateDataStructure();
+    Goal g = current_state->getCurrentGoal();
+    if(current_state->getAgentX()==g.x && current_state->getAgentY()==g.y && !current_state->goalReached())
+    {
+        current_state->atGoal();
+        return 50.;
+    }
+    if(wm.getNumberOfChunks()==0)
+        return -100.;//teach iti quickly to keep a move chunk in memory
+    return -1.;
+}
+
 /*
  * This is layed out in a manner that should give a spread based on available options
  * 1 is where we are, .6 is where we can move .3 is where we can move in 2 moves
@@ -138,13 +167,16 @@ void RunSimulation(bool verbose, bool end)
  *.3 .6  1 .6 .3
  * 0 .3 .6 .3  0
  * 0  0 .3  0  0
+ * 
+ * currently the representation is and x choord y choord, concat onto their end
+ * This may need to change to a 2d array though this would be really inefficent
  */
-void stateFunctionBoth(FeatureVector& fv, WorkingMemory& wm)
+void upperStateFunction(FeatureVector& fv, WorkingMemory& wm)
 {
     fv.clearVector();
     state *current_state =(state*) wm.getStateDataStructure();
     int x = current_state->getAgentX();
-    int y = current_state->getAgentY();
+    int y = current_state->getAgentY()+totalSize;
     fv.setValue(x,1.);
     fv.setValue(y,1.);
     distanceClear c = current_state->getDistanceClear();
@@ -165,9 +197,92 @@ void stateFunctionBoth(FeatureVector& fv, WorkingMemory& wm)
         fv.setValue(y+1,.6);
     if(c.down>=2)
         fv.setValue(y+2,.3);
+}
+
+void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
+{
+    fv.clearVector();
+    state *current_state =(state*) wm.getStateDataStructure();
+    int x = current_state->getAgentX();
+    int y = current_state->getAgentY()+totalSize;//total size should be the offset needed
+    fv.setValue(x,1.);
+    fv.setValue(y,1.);
+    distanceClear c = current_state->getDistanceClear();
+    //DIAGNOLS are not yet implemnted - this cant handle that I don't think
+    if(c.left>=1)
+        fv.setValue(x-1,.6);
+    if(c.left>=2)
+        fv.setValue(x-2,.3);
+    if(c.right>=1)
+        fv.setValue(x+1,.6);
+    if(c.right>=2)
+        fv.setValue(x+2,.3);
+    if(c.up>=1)
+        fv.setValue(y-1,.6);
+    if(c.up>=2)
+        fv.setValue(y-2,.3);
+    if(c.down>=1)
+        fv.setValue(y+1,.6);
+    if(c.down>=2)
+        fv.setValue(y+2,.3);
+    //end identical part
+    //this is designed to set the goal as a position, I dont know if this is how it differentiates
+    fv.setValue(current_state->getCurrentGoal().x, 2.);
+    fv.setValue(current_state->getCurrentGoal().y+totalSize, 2.);
 
 }
 
+void upperChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
+{
+    fv.clearVector()
+    if(chk.getType()=="GOAL")
+    {
+        Goal* g = (Goal*)chk.getData();
+        fv.setValue(g->x,1.);
+        fv.setValue(g->y+totalSize, 1.);
+    }
+}
+
+void lowerChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
+{
+    fv.clearVector()
+    if(chk.getType()=="MOVE")
+    {
+        Direction* dir = (Direction*) chk.getData();
+        switch(dir*)
+        {
+            case UP:
+            fv.setValue(0,1.);
+            break;
+            case DOWN:
+            fv.setValue(1,1.);
+            break;
+            case LEFT:
+            fv.setValue(2,1.);
+            break;
+            case RIGHT:
+            fv.setValue(3,1.);
+            break;
+        }
+    }
+}
+
+void deleteChunkFunction(Chunk& chk)
+{
+    if(chk.getType()=="MOVE")
+    {
+        delete ((Direction*) chk.getData());
+        chk.setType("EMPTY");
+    }
+    else if(chk.getType()=="GOAL")
+    {
+        delete ((Goal*) chk.getData());
+        chk.setType("EMPTY");
+    }
+    else{
+        cerr<<"**ERROR** Unidentified chunk attempting to be deleted!\n";
+    }
+}
 
 
 
@@ -362,12 +477,12 @@ Tile state::getAgentTileData()
 
 double state::checkLocation()
 {//this will be used to determine the given reward to the upper level while updating state info
-    if(atActor.getAgentTileData() == KEY && !hasKey())
+    if(getAgentTileData() == KEY && !hasKey())
     {
         acquiredKey = 1;
         return 20.;
     }
-    if(atActor.getAgentTileData()==LOCK && hasKey())
+    if(getAgentTileData()==LOCK && hasKey())
     {
         success = 1;
         return 100.;
