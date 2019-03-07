@@ -52,6 +52,12 @@ void printMap(state s)
     {
         for(int i = 0; i<totalSize; i++)
         {
+            Goal g = s.getCurrentGoal();
+            if(g.x == i && g.y == j)
+            {
+                cout<<"C ";
+                continue;
+            }
             switch(s.info[j][i])
             {
                 case AGENT:
@@ -77,11 +83,57 @@ void printMap(state s)
     }
 }
 
+void populateMoveChunkList(list<Chunk> &lst)
+{
+    lst.clear();
+    Chunk ch;
+    ch.setType("MOVE");
+    Direction *d = new Direction();
+    *d = UP;
+    ch.setData(d);
+    lst.push_back(ch);
+    d = new Direction();
+    *d = DOWN;
+    ch.setData(d);
+    lst.push_back(ch);
+    d = new Direction();
+    *d = LEFT;
+    ch.setData(d);
+    lst.push_back(ch);
+    d = new Direction();
+    *d = RIGHT;
+    ch.setData(d);
+    lst.push_back(ch);
+}
+
+void populateGoalChunkList(list<Chunk> &lst,const state &s)
+{
+    lst.clear();
+    Chunk ch;
+    ch.setType("GOAL");
+
+    //this should be changed to list all points in the current room
+    for(int i = 0; i < totalSize; i++)
+    {
+        for(int j = 0; j<totalSize;j++)
+        {
+            if(s.info.at(i)[j]!=WALL&&s.info.at(i)[j]!=AGENT)
+            {
+                Goal *g = new Goal();
+                g->x = j; g->y = i;
+                ch.setData(g);
+                lst.push_back(ch);
+            }
+        }
+    }
+}
+
 void RunSimulation(bool verbose, bool end)
 {
 
     // double finished_percentage = .99;
-    int number_of_trials = 10000;
+    int number_of_trials = 100000;
+    int steps_per_trial = 1000;
 
     //this block holds the settings for the success window
     // int window_size = 20;//this will succed with higher values, though it will take a longer time
@@ -112,23 +164,139 @@ void RunSimulation(bool verbose, bool end)
     cerr<< "Random Seed is: "<<random_seed<<"\n";
     bool use_actor = false;//this isn't implemented in WMTK
 
+    WorkingMemory WMU(upper_wm_size, state_feature_vector_size,
+	upper_chunk_feature_vector_size, &current_state, upperRewardFunction,
+	upperStateFunction, upperChunkFunction, deleteChunkFunction, use_actor,
+	or_code);
+    WorkingMemory WML(lower_wm_size, state_feature_vector_size,
+	lower_chunk_feature_vector_size, &current_state, lowerRewardFunction,
+	lowerStateFunction, lowerChunkFunction, deleteChunkFunction, use_actor,
+	or_code);
 
-    current_state.initState();
-    char c = '1';
-    while(c!='0')
+    // Use learning rate
+	WMU.getCriticNetwork()->setLearningRate(lrate);
+
+	/// Use lambda (eligibility discount rate)
+	WMU.getCriticNetwork()->setLambda(lambda);
+
+	// Use gamma (discount rate)
+	WMU.getCriticNetwork()->setGamma(ngamma);
+
+	// Use exploration percentage (chance it does something random)
+	WMU.setExplorationPercentage(exploration_percentage);
+
+    	// Use learning rate
+	WML.getCriticNetwork()->setLearningRate(lrate);
+
+	/// Use lambda (eligibility discount rate)
+	WML.getCriticNetwork()->setLambda(lambda);
+
+	// Use gamma (discount rate)
+	WML.getCriticNetwork()->setGamma(ngamma);
+
+	// Use exploration percentage (chance it does something random)
+	WML.setExplorationPercentage(exploration_percentage);
+
+    Chunk direction_chunk;
+    Chunk goalChunk;
+
+    list<Chunk> cannidate_directions;
+    list<Chunk> cannidate_goals;
+
+	WMU.saveNetwork("./starting_network_upper.dat");
+
+	WML.saveNetwork("./starting_network_lower.dat");
+    
+    // char c = '1';
+    // while(c!='0')
+    // {
+    //     distanceClear d = current_state.getDistanceClear();
+    //     cout<<d.up<<" "<<d.down<<" "<<d.left<<" "<<d.right<<endl;
+    //     printMap(current_state);
+    //     cin>>c;
+    //     if(c=='w')
+    //         current_state.moveUp();
+    //     if(c=='a')
+    //         current_state.moveLeft();
+    //     if(c=='s')
+    //         current_state.moveDown();
+    //     if(c=='d')
+    //         current_state.moveRight();
+    // }
+
+    for(int trial = 0; trial<number_of_trials; trial++)
     {
-        distanceClear d = current_state.getDistanceClear();
-        cout<<d.up<<" "<<d.down<<" "<<d.left<<" "<<d.right<<endl;
+        current_state.initState();
+        WMU.newEpisode();
+        WML.newEpisode();
+        bool stepComplete = 0;
+        for(int step = 0; step<steps_per_trial;step++)
+        {
+            if(current_state.goalReached())
+            {
+                populateGoalChunkList(cannidate_goals,current_state);
+                WMU.tickEpisodeClock(cannidate_goals);
+                if(WMU.getNumberOfChunks()==0)
+                {
+                    step--;
+                    continue;
+                }
+                else
+                {
+                    stepComplete=1;
+                    goalChunk = WMU.getChunk(0);
+                    if(goalChunk.getType()=="GOAL")
+                    {
+                        Goal* g = (Goal*)goalChunk.getData();
+                        current_state.setGoal(g->x,g->y);
+                    }
+                }
+                
+            }
+            
+
+            populateMoveChunkList(cannidate_directions);
+            WML.tickEpisodeClock(cannidate_directions);
+            if(WML.getNumberOfChunks()==0)
+            {
+                step--;
+                continue;
+            }
+            else
+            {
+                stepComplete=0;
+                direction_chunk = WML.getChunk(0);
+                if(direction_chunk.getType()=="MOVE")
+                {
+                    Direction* d = (Direction*)direction_chunk.getData();
+                    switch(*d)
+                    {
+                        case UP:
+                        current_state.moveUp();
+                        break;
+                        case DOWN:
+                        current_state.moveDown();
+                        break;
+                        case LEFT:
+                        current_state.moveLeft();
+                        break;
+                        case RIGHT:
+                        current_state.moveRight();
+                        break;
+                    }
+                }
+            }
+            if(verbose)
+            {
+                printMap(current_state);
+                cout<<endl;
+            }
+            if(current_state.getSuccess())
+                break;
+            
+        }
+        cout<<"FINAL MAP OF TRIAL: "<<trial<<endl<<"SUCESS: "<<current_state.getSuccess()<<" KEY: "<<current_state.hasKey()<<endl;
         printMap(current_state);
-        cin>>c;
-        if(c=='w')
-            current_state.moveUp();
-        if(c=='a')
-            current_state.moveLeft();
-        if(c=='s')
-            current_state.moveDown();
-        if(c=='d')
-            current_state.moveRight();
     }
     printMap(current_state);
 }
@@ -138,7 +306,7 @@ double upperRewardFunction(WorkingMemory& wm)
 {
     state *current_state = (state*) wm.getStateDataStructure();
     double d = current_state->checkLocation();//could be a better way to lay this out
-    if(d<0&&wm.getNumberOfChunks()==0)//this is to quickly tech it to keep a chunk in memory
+    if(d<0&&wm.getNumberOfChunks()==0)//this is to quickly teach it to keep a chunk in memory
         return -100.;
     return d;
 }
@@ -154,7 +322,7 @@ double lowerRewardFunction(WorkingMemory& wm)
         return 50.;
     }
     if(wm.getNumberOfChunks()==0)
-        return -100.;//teach iti quickly to keep a move chunk in memory
+        return -100.;//teach it quickly to keep a move chunk in memory
     return -1.;
 }
 
@@ -234,7 +402,7 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
 
 void upperChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
 {
-    fv.clearVector()
+    fv.clearVector();
     if(chk.getType()=="GOAL")
     {
         Goal* g = (Goal*)chk.getData();
@@ -245,11 +413,11 @@ void upperChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
 
 void lowerChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
 {
-    fv.clearVector()
+    fv.clearVector();
     if(chk.getType()=="MOVE")
     {
         Direction* dir = (Direction*) chk.getData();
-        switch(dir*)
+        switch(*dir)
         {
             case UP:
             fv.setValue(0,1.);
@@ -291,6 +459,12 @@ void deleteChunkFunction(Chunk& chk)
 //State Class Functions:
 void state::initState()
 {
+    for(int i = 0; i<info.size();i++)
+    {
+        info.at(i).clear();
+    }
+    if(info.size()>0)
+        info.clear();
     for(int i = 0; i<totalSize; i++)
     {
         info.push_back(vector<Tile>());
@@ -333,6 +507,9 @@ void state::initState()
     info.at(roomSize+5)[roomSize+1] = EMPTY;
     info.at(roomSize+5)[roomSize] = EMPTY;
     
+    acquiredKey = 0;
+    success = 0;
+    reachedGoal = 1;
 }
 
 bool state::moveUp()
@@ -343,7 +520,7 @@ bool state::moveUp()
     switch(upActor)
     {
         case EMPTY:
-    cout<<getTileName(getAgentTileData())<<endl;
+    // cout<<getTileName(getAgentTileData())<<endl;
             upActor=AGENT;
             atActor=getAgentTileData();
         break;
@@ -377,7 +554,7 @@ bool state::moveDown()
     {
         case EMPTY:
 
-    cout<<getTileName(getAgentTileData())<<endl;
+    // cout<<getTileName(getAgentTileData())<<endl;
             atActor=getAgentTileData();
             downActor=AGENT;
         break;
