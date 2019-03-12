@@ -26,7 +26,17 @@ using namespace std;
  * Reward is dictated by higher level (I don't know how to do this yet) (-1 for each step could also go here)
  * Needs to learn how to navigate to waypoints dicated by higher level
  * State function is the same as higher level? Maybe chould be changed to incorperate waypoints, but I'm not sure how that would work
+ * 
+ * 
+ * Questions for later
+ * Is there a better way to represent the state vector for the lower level
+ * Should I force the Upper AI to choose a new goal each time (within range? Limit possibilities?)
+ * Should I teach the lower to move and then just load it every time? (How should I represent goals in Feature Vector)
+ * How should I be feeding chunks to the AI
+ * Is this implementation a tick late?
+ * Along with that, it appears that the upper-level doesn't get it's reward fuction called
  */
+int goalCount = 0;
 string getTileName(Tile t)
 {
     switch(t)
@@ -111,11 +121,50 @@ void populateGoalChunkList(list<Chunk> &lst,const state &s)
     lst.clear();
     Chunk ch;
     ch.setType("GOAL");
-
-    //this should be changed to list all points in the current room
-    for(int i = 0; i < totalSize; i++)
+    if(goalCount<100)
     {
-        for(int j = 0; j<totalSize;j++)
+        goalCount++;
+        if(s.getAgentX()>0)
+        {
+            Goal *g = new Goal();
+            g->x = s.getAgentX()-1; g->y = s.getAgentY();
+            ch.setData(g);
+            lst.push_back(ch);
+        }
+        if(s.getAgentX()<totalSize-1)
+        {
+            Goal *g = new Goal();
+            g->x = s.getAgentX()+1; g->y = s.getAgentY();
+            ch.setData(g);
+            lst.push_back(ch);
+        }
+        if(s.getAgentY()>0)
+        {
+            Goal *g = new Goal();
+            g->x = s.getAgentX(); g->y = s.getAgentY()-1;
+            ch.setData(g);
+            lst.push_back(ch);
+        }
+        if(s.getAgentX()<totalSize-1)
+        {
+            Goal *g = new Goal();
+            g->x = s.getAgentX(); g->y = s.getAgentY()+1;
+            ch.setData(g);
+            lst.push_back(ch);
+        }
+        return;
+    }
+    int lB = s.getAgentX()-roomSize/2;
+    lB = lB >=0? lB : 0;
+    int uB = s.getAgentY()-roomSize/2;
+    uB = uB >=0? lB : 0;    
+    int rB = s.getAgentX()+roomSize/2;
+    rB = rB <totalSize? rB : totalSize-1;
+    int dB = s.getAgentY()+roomSize/2;
+    dB = dB <totalSize? dB : totalSize-1;
+    for(int i = uB; i<dB; i++)
+    {
+        for(int j = lB; j<rB;j++)
         {
             if(s.info.at(i)[j]!=WALL&&s.info.at(i)[j]!=AGENT)
             {
@@ -132,8 +181,8 @@ void RunSimulation(bool verbose, bool end)
 {
 
     // double finished_percentage = .99;
-    int number_of_trials = 100000;
-    int steps_per_trial = 1000;
+    int number_of_trials = 1;
+    int steps_per_trial = 500000;
 
     //this block holds the settings for the success window
     // int window_size = 20;//this will succed with higher values, though it will take a longer time
@@ -224,11 +273,12 @@ void RunSimulation(bool verbose, bool end)
     //         current_state.moveRight();
     // }
 
+        current_state.initState();
     for(int trial = 0; trial<number_of_trials; trial++)
     {
-        current_state.initState();
         WMU.newEpisode();
         WML.newEpisode();
+        current_state.initState();
         bool stepComplete = 0;
         for(int step = 0; step<steps_per_trial;step++)
         {
@@ -249,6 +299,7 @@ void RunSimulation(bool verbose, bool end)
                     {
                         Goal* g = (Goal*)goalChunk.getData();
                         current_state.setGoal(g->x,g->y);
+                        cout<<"NEXT GOAL IS: "<<g->x<<", "<<g->y;
                     }
                 }
                 
@@ -272,16 +323,16 @@ void RunSimulation(bool verbose, bool end)
                     switch(*d)
                     {
                         case UP:
-                        current_state.moveUp();
+                        current_state.hitWall = !current_state.moveUp();
                         break;
                         case DOWN:
-                        current_state.moveDown();
+                        current_state.hitWall = !current_state.moveDown();
                         break;
                         case LEFT:
-                        current_state.moveLeft();
+                        current_state.hitWall = !current_state.moveLeft();
                         break;
                         case RIGHT:
-                        current_state.moveRight();
+                        current_state.hitWall = !current_state.moveRight();
                         break;
                     }
                 }
@@ -298,16 +349,23 @@ void RunSimulation(bool verbose, bool end)
         cout<<"FINAL MAP OF TRIAL: "<<trial<<endl<<"SUCESS: "<<current_state.getSuccess()<<" KEY: "<<current_state.hasKey()<<endl;
         printMap(current_state);
     }
+	WMU.saveNetwork("./ending_network_upper.dat");
+	WML.saveNetwork("./ending_network_lower.dat");
     printMap(current_state);
 }
 
 
 double upperRewardFunction(WorkingMemory& wm)
 {
+    cout<<"UPPER REWARD CALLED";
     state *current_state = (state*) wm.getStateDataStructure();
     double d = current_state->checkLocation();//could be a better way to lay this out
     if(d<0&&wm.getNumberOfChunks()==0)//this is to quickly teach it to keep a chunk in memory
         return -100.;
+    if(d>0)
+    {
+        cout<<"REWARD UPPER!?!";
+    }
     return d;
 }
 
@@ -319,10 +377,19 @@ double lowerRewardFunction(WorkingMemory& wm)
     if(current_state->getAgentX()==g.x && current_state->getAgentY()==g.y && !current_state->goalReached())
     {
         current_state->atGoal();
+        cout<<"REACHD GOAL!!!";
         return 50.;
     }
     if(wm.getNumberOfChunks()==0)
+    {
+        cout<<"NO CHUNKS!";
         return -100.;//teach it quickly to keep a move chunk in memory
+    }
+    if(current_state->hitWall)
+    {
+        cout<<"HIT WALL*";
+        return -5.;
+    }
     return -1.;
 }
 
@@ -395,8 +462,8 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
         fv.setValue(y+2,.3);
     //end identical part
     //this is designed to set the goal as a position, I dont know if this is how it differentiates
-    fv.setValue(current_state->getCurrentGoal().x, 2.);
-    fv.setValue(current_state->getCurrentGoal().y+totalSize, 2.);
+    fv.setValue(current_state->getCurrentGoal().x, 1.);
+    fv.setValue(current_state->getCurrentGoal().y+totalSize, 1.);
 
 }
 
@@ -510,6 +577,7 @@ void state::initState()
     acquiredKey = 0;
     success = 0;
     reachedGoal = 1;
+    hitWall = 0;
 }
 
 bool state::moveUp()
@@ -664,7 +732,7 @@ double state::checkLocation()
         success = 1;
         return 100.;
     }
-    return -1.;
+    return 0.;
 }
 
 distanceClear state::getDistanceClear()

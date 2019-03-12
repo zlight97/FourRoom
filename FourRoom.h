@@ -13,6 +13,7 @@ const int keyY = totalSize-roomSize;
 const int lockX = 4;
 const int lockY = totalSize-2;
 
+
 //Each tile has a type dicated by this enum
 enum Tile
 {
@@ -59,14 +60,15 @@ public:
     bool moveRight();
     distanceClear getDistanceClear();
     double checkLocation();
-    int getAgentX() { return agentX; }
-    int getAgentY() { return agentY; }
+    int getAgentX() const{ return agentX; }
+    int getAgentY() const{ return agentY; }
     bool getSuccess() { return success; }
     bool hasKey() { return acquiredKey; }
     bool goalReached() {return reachedGoal;}
     void atGoal() {reachedGoal = 1;}
     void setGoal(int x, int y) {currentGoal.x = x; currentGoal.y = y; reachedGoal = 0;}
     Goal getCurrentGoal() {return currentGoal;}
+    bool hitWall = false;
 private:
     Goal currentGoal;
     bool acquiredKey = false;
