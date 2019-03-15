@@ -70,11 +70,11 @@ public:
     Goal getCurrentGoal() {return currentGoal;}
     bool hitWall = false;
 private:
+    Tile getAgentTileData();
     Goal currentGoal;
     bool acquiredKey = false;
     bool success = false;
     bool reachedGoal = false;
-    Tile getAgentTileData();
     int agentX;
     int agentY;
 };

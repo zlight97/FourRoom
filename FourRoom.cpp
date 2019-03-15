@@ -29,12 +29,20 @@ using namespace std;
  * 
  * 
  * Questions for later
- * Is there a better way to represent the state vector for the lower level
+ * Is there a better way to represent the state vector for the lower level, how should it know where the destination is / maybe upper level?
+ * ^Yes, both as two x,y vectors -> x,y,x`,y`
  * Should I force the Upper AI to choose a new goal each time (within range? Limit possibilities?)
+ * ^Give a step limit to select new
  * Should I teach the lower to move and then just load it every time? (How should I represent goals in Feature Vector)
+ * ^Not a bad idea, same as above
  * How should I be feeding chunks to the AI
+ * ^this is fine. Give the upper all valid chunks
  * Is this implementation a tick late?
+ * ^Maybe test more
  * Along with that, it appears that the upper-level doesn't get it's reward fuction called
+ * ^Test more
+ * Should wmtk paramaters be changed
+ * ^Changed lambda to 0
  */
 int goalCount = 0;
 string getTileName(Tile t)
@@ -121,31 +129,34 @@ void populateGoalChunkList(list<Chunk> &lst,const state &s)
     lst.clear();
     Chunk ch;
     ch.setType("GOAL");
+    int agentX = s.getAgentX();
+    int agentY = s.getAgentY();
     if(goalCount<100)
     {
+        cout<<"goalCountINC\n";
         goalCount++;
-        if(s.getAgentX()>0)
+        if(s.getAgentX()>0&&s.leftActor!=WALL)
         {
             Goal *g = new Goal();
             g->x = s.getAgentX()-1; g->y = s.getAgentY();
             ch.setData(g);
             lst.push_back(ch);
         }
-        if(s.getAgentX()<totalSize-1)
+        if(s.getAgentX()<totalSize-1&&s.rightActor!=WALL)
         {
             Goal *g = new Goal();
             g->x = s.getAgentX()+1; g->y = s.getAgentY();
             ch.setData(g);
             lst.push_back(ch);
         }
-        if(s.getAgentY()>0)
+        if(s.getAgentY()>0&&s.upActor!=WALL)
         {
             Goal *g = new Goal();
             g->x = s.getAgentX(); g->y = s.getAgentY()-1;
             ch.setData(g);
             lst.push_back(ch);
         }
-        if(s.getAgentX()<totalSize-1)
+        if(s.getAgentY()<totalSize-1&&s.downActor!=WALL)
         {
             Goal *g = new Goal();
             g->x = s.getAgentX(); g->y = s.getAgentY()+1;
@@ -201,9 +212,9 @@ void RunSimulation(bool verbose, bool end)
     //these values go for both
     int state_feature_vector_size = 2*totalSize;
     double lrate = .01;
-    double lambda = .7;
+    double lambda = 0.//.7;
     double ngamma = .99;
-    double exploration_percentage = .01;//learns faster with ~.05, but more consistant with .01
+    double exploration_percentage = .05;
     OR_CODE or_code = NOISY_OR;
     state current_state;//this is the state data-type
 
@@ -285,6 +296,7 @@ void RunSimulation(bool verbose, bool end)
             if(current_state.goalReached())
             {
                 populateGoalChunkList(cannidate_goals,current_state);
+                cout<<"UPPER GOALS# "<<cannidate_goals.size()<<endl;
                 WMU.tickEpisodeClock(cannidate_goals);
                 if(WMU.getNumberOfChunks()==0)
                 {
@@ -299,7 +311,7 @@ void RunSimulation(bool verbose, bool end)
                     {
                         Goal* g = (Goal*)goalChunk.getData();
                         current_state.setGoal(g->x,g->y);
-                        cout<<"NEXT GOAL IS: "<<g->x<<", "<<g->y;
+                        cout<<"NEXT GOAL IS: "<<g->x<<", "<<g->y<<endl;
                     }
                 }
                 
@@ -342,8 +354,8 @@ void RunSimulation(bool verbose, bool end)
                 printMap(current_state);
                 cout<<endl;
             }
-            if(current_state.getSuccess())
-                break;
+            // if(current_state.getSuccess())
+            //     break;
             
         }
         cout<<"FINAL MAP OF TRIAL: "<<trial<<endl<<"SUCESS: "<<current_state.getSuccess()<<" KEY: "<<current_state.hasKey()<<endl;
@@ -357,14 +369,14 @@ void RunSimulation(bool verbose, bool end)
 
 double upperRewardFunction(WorkingMemory& wm)
 {
-    cout<<"UPPER REWARD CALLED";
+    cout<<"UPPER REWARD CALLED\n";
     state *current_state = (state*) wm.getStateDataStructure();
     double d = current_state->checkLocation();//could be a better way to lay this out
     if(d<0&&wm.getNumberOfChunks()==0)//this is to quickly teach it to keep a chunk in memory
         return -100.;
     if(d>0)
     {
-        cout<<"REWARD UPPER!?!";
+        cout<<"REWARD UPPER!?!\n";
     }
     return d;
 }
@@ -377,17 +389,17 @@ double lowerRewardFunction(WorkingMemory& wm)
     if(current_state->getAgentX()==g.x && current_state->getAgentY()==g.y && !current_state->goalReached())
     {
         current_state->atGoal();
-        cout<<"REACHD GOAL!!!";
+        cout<<"REACHD GOAL!!!\n";
         return 50.;
     }
     if(wm.getNumberOfChunks()==0)
     {
-        cout<<"NO CHUNKS!";
+        cout<<"NO CHUNKS!\n";
         return -100.;//teach it quickly to keep a move chunk in memory
     }
     if(current_state->hitWall)
     {
-        cout<<"HIT WALL*";
+        cout<<"HIT WALL*\n";
         return -5.;
     }
     return -1.;
