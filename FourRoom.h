@@ -58,7 +58,7 @@ public:
     bool moveDown();
     bool moveLeft();
     bool moveRight();
-    distanceClear getDistanceClear();
+    distanceClear getDistanceClear(bool b);
     double checkLocation();
     int getAgentX() const{ return agentX; }
     int getAgentY() const{ return agentY; }

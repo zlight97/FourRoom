@@ -208,11 +208,11 @@ void RunSimulation(bool verbose, bool end)
     int upper_wm_size = 1;
     int lower_chunk_feature_vector_size = 4;
     int upper_chunk_feature_vector_size = 2*totalSize;
-
+    int upper_state_feature_vector_size = 2*totalSize;
+    int lower_state_feature_vector_size = 48;
     //these values go for both
-    int state_feature_vector_size = 2*totalSize;
     double lrate = .01;
-    double lambda = 0.//.7;
+    double lambda = 0.;//.7;
     double ngamma = .99;
     double exploration_percentage = .05;
     OR_CODE or_code = NOISY_OR;
@@ -224,11 +224,11 @@ void RunSimulation(bool verbose, bool end)
     cerr<< "Random Seed is: "<<random_seed<<"\n";
     bool use_actor = false;//this isn't implemented in WMTK
 
-    WorkingMemory WMU(upper_wm_size, state_feature_vector_size,
+    WorkingMemory WMU(upper_wm_size, upper_state_feature_vector_size,
 	upper_chunk_feature_vector_size, &current_state, upperRewardFunction,
 	upperStateFunction, upperChunkFunction, deleteChunkFunction, use_actor,
 	or_code);
-    WorkingMemory WML(lower_wm_size, state_feature_vector_size,
+    WorkingMemory WML(lower_wm_size, lower_state_feature_vector_size,
 	lower_chunk_feature_vector_size, &current_state, lowerRewardFunction,
 	lowerStateFunction, lowerChunkFunction, deleteChunkFunction, use_actor,
 	or_code);
@@ -426,7 +426,7 @@ void upperStateFunction(FeatureVector& fv, WorkingMemory& wm)
     int y = current_state->getAgentY()+totalSize;
     fv.setValue(x,1.);
     fv.setValue(y,1.);
-    distanceClear c = current_state->getDistanceClear();
+    distanceClear c = current_state->getDistanceClear(0);
     //DIAGNOLS are not yet implemnted - this cant handle that I don't think
     if(c.left>=1)
         fv.setValue(x-1,.6);
@@ -454,7 +454,7 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
     int y = current_state->getAgentY()+totalSize;//total size should be the offset needed
     fv.setValue(x,1.);
     fv.setValue(y,1.);
-    distanceClear c = current_state->getDistanceClear();
+    distanceClear c = current_state->getDistanceClear(0);
     //DIAGNOLS are not yet implemnted - this cant handle that I don't think
     if(c.left>=1)
         fv.setValue(x-1,.6);
@@ -474,8 +474,29 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
         fv.setValue(y+2,.3);
     //end identical part
     //this is designed to set the goal as a position, I dont know if this is how it differentiates
-    fv.setValue(current_state->getCurrentGoal().x, 1.);
-    fv.setValue(current_state->getCurrentGoal().y+totalSize, 1.);
+
+    x = (2*totalSize) + current_state->getCurrentGoal().x;
+    y = (3*totalSize) + current_state->getCurrentGoal().y;
+    fv.setValue(x,1.);
+    fv.setValue(y,1.);
+    c = current_state->getDistanceClear(1);
+    //DIAGNOLS are not yet implemnted - this cant handle that I don't think
+    if(c.left>=1)
+        fv.setValue(x-1,.6);
+    if(c.left>=2)
+        fv.setValue(x-2,.3);
+    if(c.right>=1)
+        fv.setValue(x+1,.6);
+    if(c.right>=2)
+        fv.setValue(x+2,.3);
+    if(c.up>=1)
+        fv.setValue(y-1,.6);
+    if(c.up>=2)
+        fv.setValue(y-2,.3);
+    if(c.down>=1)
+        fv.setValue(y+1,.6);
+    if(c.down>=2)
+        fv.setValue(y+2,.3);
 
 }
 
@@ -579,7 +600,7 @@ void state::initState()
     info.at(roomSize)[roomSize+2] = EMPTY;
 
     //top
-    info.at(1)[roomSize+1] = EMPTY;
+    info.at(1.)[roomSize+1] = EMPTY;
     info.at(1)[roomSize] = EMPTY;
 
     //bottom
@@ -747,8 +768,21 @@ double state::checkLocation()
     return 0.;
 }
 
-distanceClear state::getDistanceClear()
+distanceClear state::getDistanceClear(bool b)
 {
+    int agentY = this->agentY;
+    int agentX = this->agentX;
+    if(b)
+    {
+        agentY = currentGoal.y;
+        agentX = currentGoal.x;
+        if(agentX>totalSize||agentX<0)
+            agentX = 0;
+        if(agentY>totalSize||agentY<0)
+            agentY = 0;
+            
+    }
+    
 //Top
     distanceClear ret;
 
