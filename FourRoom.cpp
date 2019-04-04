@@ -5,11 +5,6 @@
 #include <vector>
 
 //macros that simplified writting the state class
-#define atActor info.at(agentY)[agentX]
-#define upActor info.at(agentY-1)[agentX]
-#define downActor info.at(agentY+1)[agentX]
-#define leftActor info.at(agentY)[agentX-1]
-#define rightActor info.at(agentY)[agentX+1]
 
 using namespace std;
 
@@ -131,68 +126,76 @@ void populateGoalChunkList(list<Chunk> &lst,const state &s)
     ch.setType("GOAL");
     int agentX = s.getAgentX();
     int agentY = s.getAgentY();
-    if(goalCount<100)
-    {
-        cout<<"goalCountINC\n";
-        goalCount++;
-        if(s.getAgentX()>0&&s.leftActor!=WALL)
-        {
-            Goal *g = new Goal();
-            g->x = s.getAgentX()-1; g->y = s.getAgentY();
-            ch.setData(g);
-            lst.push_back(ch);
-        }
-        if(s.getAgentX()<totalSize-1&&s.rightActor!=WALL)
-        {
-            Goal *g = new Goal();
-            g->x = s.getAgentX()+1; g->y = s.getAgentY();
-            ch.setData(g);
-            lst.push_back(ch);
-        }
-        if(s.getAgentY()>0&&s.upActor!=WALL)
-        {
-            Goal *g = new Goal();
-            g->x = s.getAgentX(); g->y = s.getAgentY()-1;
-            ch.setData(g);
-            lst.push_back(ch);
-        }
-        if(s.getAgentY()<totalSize-1&&s.downActor!=WALL)
-        {
-            Goal *g = new Goal();
-            g->x = s.getAgentX(); g->y = s.getAgentY()+1;
-            ch.setData(g);
-            lst.push_back(ch);
-        }
-        return;
-    }
-    int lB = s.getAgentX()-roomSize/2;
-    lB = lB >=0? lB : 0;
-    int uB = s.getAgentY()-roomSize/2;
-    uB = uB >=0? lB : 0;    
-    int rB = s.getAgentX()+roomSize/2;
-    rB = rB <totalSize? rB : totalSize-1;
-    int dB = s.getAgentY()+roomSize/2;
-    dB = dB <totalSize? dB : totalSize-1;
-    for(int i = uB; i<dB; i++)
-    {
-        for(int j = lB; j<rB;j++)
-        {
-            if(s.info.at(i)[j]!=WALL&&s.info.at(i)[j]!=AGENT)
-            {
+    // if(goalCount<100)
+    // {
+    //     cout<<"goalCountINC\n";
+    //     goalCount++;
+    //     if(s.getAgentX()>0&&s.leftActor!=WALL)
+    //     {
+    //         Goal *g = new Goal();
+    //         g->x = s.getAgentX()-1; g->y = s.getAgentY();
+    //         ch.setData(g);
+    //         lst.push_back(ch);
+    //     }
+    //     if(s.getAgentX()<totalSize-1&&s.rightActor!=WALL)
+    //     {
+    //         Goal *g = new Goal();
+    //         g->x = s.getAgentX()+1; g->y = s.getAgentY();
+    //         ch.setData(g);
+    //         lst.push_back(ch);
+    //     }
+    //     if(s.getAgentY()>0&&s.upActor!=WALL)
+    //     {
+    //         Goal *g = new Goal();
+    //         g->x = s.getAgentX(); g->y = s.getAgentY()-1;
+    //         ch.setData(g);
+    //         lst.push_back(ch);
+    //     }
+    //     if(s.getAgentY()<totalSize-1&&s.downActor!=WALL)
+    //     {
+    //         Goal *g = new Goal();
+    //         g->x = s.getAgentX(); g->y = s.getAgentY()+1;
+    //         ch.setData(g);
+    //         lst.push_back(ch);
+    //     }
+    //     return;
+    // }
+    // int lB = s.getAgentX()-roomSize/2;
+    // lB = lB >=0? lB : 0;
+    // int uB = s.getAgentY()-roomSize/2;
+    // uB = uB >=0? lB : 0;    
+    // int rB = s.getAgentX()+roomSize/2;
+    // rB = rB <totalSize? rB : totalSize-1;
+    // int dB = s.getAgentY()+roomSize/2;
+    // dB = dB <totalSize? dB : totalSize-1;
+    // for(int i = uB; i<dB; i++)
+    // for(int i = 0; i<totalSize; i++)
+    // {
+    //     // for(int j = lB; j<rB;j++)
+    //     for(int j = 0; j<totalSize; j++)
+    //     {
+    //         if(s.info.at(i)[j]!=WALL&&s.info.at(i)[j]!=AGENT)
+    //         {
+    //             Goal *g = new Goal();
+    //             g->x = j; g->y = i;
+    //             ch.setData(g);
+    //             lst.push_back(ch);
+    //         }
+    //     }
+    // }
+
                 Goal *g = new Goal();
-                g->x = j; g->y = i;
+                g->x = rand()%totalSize; g->y = rand()%totalSize;
                 ch.setData(g);
                 lst.push_back(ch);
-            }
-        }
-    }
+
 }
 
 void RunSimulation(bool verbose, bool end)
 {
 
     // double finished_percentage = .99;
-    int number_of_trials = 1;
+    int number_of_trials = 5;
     int steps_per_trial = 500000;
 
     //this block holds the settings for the success window
@@ -293,25 +296,27 @@ void RunSimulation(bool verbose, bool end)
         bool stepComplete = 0;
         for(int step = 0; step<steps_per_trial;step++)
         {
-            if(current_state.goalReached())
+            if(current_state.goalReached()||current_state.getSteps()>100)
             {
                 populateGoalChunkList(cannidate_goals,current_state);
-                cout<<"UPPER GOALS# "<<cannidate_goals.size()<<endl;
+                cout<<"UPPER GOALS# "<<cannidate_goals.size()<<" Steps: "<<current_state.getSteps()<<endl;
                 WMU.tickEpisodeClock(cannidate_goals);
                 if(WMU.getNumberOfChunks()==0)
                 {
                     step--;
+                    // cout<<"NAH"<<current_state.getSteps()<<endl;
                     continue;
                 }
                 else
                 {
-                    stepComplete=1;
                     goalChunk = WMU.getChunk(0);
                     if(goalChunk.getType()=="GOAL")
                     {
+                        stepComplete=1;
+                        current_state.resetSteps();
                         Goal* g = (Goal*)goalChunk.getData();
                         current_state.setGoal(g->x,g->y);
-                        cout<<"NEXT GOAL IS: "<<g->x<<", "<<g->y<<endl;
+                        // cout<<"NEXT GOAL IS: "<<g->x<<", "<<g->y<<endl;
                     }
                 }
                 
@@ -335,15 +340,19 @@ void RunSimulation(bool verbose, bool end)
                     switch(*d)
                     {
                         case UP:
+                        current_state.step();
                         current_state.hitWall = !current_state.moveUp();
                         break;
                         case DOWN:
+                        current_state.step();
                         current_state.hitWall = !current_state.moveDown();
                         break;
                         case LEFT:
+                        current_state.step();
                         current_state.hitWall = !current_state.moveLeft();
                         break;
                         case RIGHT:
+                        current_state.step();
                         current_state.hitWall = !current_state.moveRight();
                         break;
                     }
@@ -368,15 +377,15 @@ void RunSimulation(bool verbose, bool end)
 
 
 double upperRewardFunction(WorkingMemory& wm)
-{
-    cout<<"UPPER REWARD CALLED\n";
+{ //could add negative reward for taking too long (bad goal)
+    // cout<<"UPPER REWARD CALLED\n";
     state *current_state = (state*) wm.getStateDataStructure();
     double d = current_state->checkLocation();//could be a better way to lay this out
     if(d<0&&wm.getNumberOfChunks()==0)//this is to quickly teach it to keep a chunk in memory
         return -100.;
     if(d>0)
     {
-        cout<<"REWARD UPPER!?!\n";
+        // cout<<"REWARD UPPER!?!\n";
     }
     return d;
 }
@@ -386,20 +395,22 @@ double lowerRewardFunction(WorkingMemory& wm)
 {
     state *current_state = (state*) wm.getStateDataStructure();
     Goal g = current_state->getCurrentGoal();
+
+    if(wm.getNumberOfChunks()==0)
+    {
+        // cout<<"NO CHUNKS!\n";
+        return -100.;//teach it quickly to keep a move chunk in memory
+    }
     if(current_state->getAgentX()==g.x && current_state->getAgentY()==g.y && !current_state->goalReached())
     {
         current_state->atGoal();
-        cout<<"REACHD GOAL!!!\n";
+        cout<<"REACHD GOAL!!! at: "<<current_state->getSteps()<<"\n";
+        current_state->resetSteps();
         return 50.;
-    }
-    if(wm.getNumberOfChunks()==0)
-    {
-        cout<<"NO CHUNKS!\n";
-        return -100.;//teach it quickly to keep a move chunk in memory
     }
     if(current_state->hitWall)
     {
-        cout<<"HIT WALL*\n";
+        // cout<<"HIT WALL*\n";
         return -5.;
     }
     return -1.;
@@ -473,14 +484,14 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
     if(c.down>=2)
         fv.setValue(y+2,.3);
     //end identical part
-    //this is designed to set the goal as a position, I dont know if this is how it differentiates
+    
 
     x = (2*totalSize) + current_state->getCurrentGoal().x;
     y = (3*totalSize) + current_state->getCurrentGoal().y;
     fv.setValue(x,1.);
     fv.setValue(y,1.);
     c = current_state->getDistanceClear(1);
-    //DIAGNOLS are not yet implemnted - this cant handle that I don't think
+    
     if(c.left>=1)
         fv.setValue(x-1,.6);
     if(c.left>=2)
@@ -555,288 +566,3 @@ void deleteChunkFunction(Chunk& chk)
 
 
 
-
-//State Class Functions:
-void state::initState()
-{
-    for(int i = 0; i<info.size();i++)
-    {
-        info.at(i).clear();
-    }
-    if(info.size()>0)
-        info.clear();
-    for(int i = 0; i<totalSize; i++)
-    {
-        info.push_back(vector<Tile>());
-        for(int j = 0; j<totalSize;j++)
-        {
-            if(j == totalSize/2 || j==(totalSize/2)-1||i == totalSize/2 || i==(totalSize/2)-1)
-                info.at(i).push_back(WALL);
-            else
-                info.at(i).push_back(EMPTY);
-        }
-    }
-    info.at(lockY)[lockX] = LOCK;
-    info.at(keyY)[keyX] = KEY;
-    while(true)
-    {   
-        int r1 = rand()%totalSize;
-        int r2 = rand()%totalSize;
-        if(info.at(r1)[r2]==EMPTY)
-        {
-            info.at(r1)[r2]=AGENT;
-            agentX = r2;
-            agentY = r1;
-            break;
-        }
-    }
-    //DOORS GO HERE
-    //Left
-    info.at(roomSize+1)[2] = EMPTY;
-    info.at(roomSize)[2] = EMPTY;
-
-    //right
-    info.at(roomSize+1)[roomSize+2] = EMPTY;
-    info.at(roomSize)[roomSize+2] = EMPTY;
-
-    //top
-    info.at(1.)[roomSize+1] = EMPTY;
-    info.at(1)[roomSize] = EMPTY;
-
-    //bottom
-    info.at(roomSize+5)[roomSize+1] = EMPTY;
-    info.at(roomSize+5)[roomSize] = EMPTY;
-    
-    acquiredKey = 0;
-    success = 0;
-    reachedGoal = 1;
-    hitWall = 0;
-}
-
-bool state::moveUp()
-{
-    if(agentY==0)
-        return 0;
-
-    switch(upActor)
-    {
-        case EMPTY:
-    // cout<<getTileName(getAgentTileData())<<endl;
-            upActor=AGENT;
-            atActor=getAgentTileData();
-        break;
-        case LOCK:
-            upActor=AGENT;
-            atActor=getAgentTileData();
-            if(acquiredKey)
-                success = true;
-        break;
-        case KEY:
-            upActor=AGENT;
-            atActor=getAgentTileData();
-            acquiredKey = true;
-        break;
-
-        case WALL:
-            return 0;
-        default:
-            return 0;
-    }
-    agentY--;
-    return 1;
-}
-
-bool state::moveDown()
-{
-    if(agentY==totalSize-1)
-        return 0;
-
-    switch(downActor)
-    {
-        case EMPTY:
-
-    // cout<<getTileName(getAgentTileData())<<endl;
-            atActor=getAgentTileData();
-            downActor=AGENT;
-        break;
-        case LOCK:
-            downActor=AGENT;
-            atActor=getAgentTileData();
-            if(acquiredKey)
-                success = true;
-        break;
-        case KEY:
-            downActor=AGENT;
-            atActor=getAgentTileData();
-            acquiredKey = true;
-        break;
-
-        case WALL:
-            return 0;
-        default:
-            return 0;
-    }
-    agentY++;
-    return 1;
-}
-
-bool state::moveLeft()
-{
-    if(agentX==0)
-        return 0;
-
-    switch(leftActor)
-    {
-        case EMPTY:
-            leftActor=AGENT;
-            atActor=getAgentTileData();
-        break;
-        case LOCK:
-            leftActor=AGENT;
-            atActor=getAgentTileData();
-            if(acquiredKey)
-                success = true;
-        break;
-        case KEY:
-            leftActor=AGENT;
-            atActor=getAgentTileData();
-            acquiredKey = true;
-        break;
-
-        case WALL:
-            return 0;
-        default:
-            return 0;
-    }
-    agentX--;
-    return 1;
-}
-
-bool state::moveRight()
-{
-    if(agentX==totalSize-1)
-        return 0;
-
-    switch(rightActor)
-    {
-        case EMPTY:
-            rightActor=AGENT;
-            atActor=getAgentTileData();
-        break;
-        case LOCK:
-            rightActor=AGENT;
-            atActor=getAgentTileData();
-            if(acquiredKey)
-                success = true;
-        break;
-        case KEY:
-            rightActor=AGENT;
-            atActor=getAgentTileData();
-            acquiredKey = true;
-        break;
-
-        case WALL:
-            return 0;
-        default:
-            return 0;
-    }
-    agentX++;
-    return 1;
-}
-
-Tile state::getAgentTileData()
-{
-    if(agentX==lockX&&agentY==lockY)
-        return LOCK;
-    if(agentY==keyY&&agentX==keyX)
-        return KEY;
-    return EMPTY;
-}
-
-double state::checkLocation()
-{//this will be used to determine the given reward to the upper level while updating state info
-    if(getAgentTileData() == KEY && !hasKey())
-    {
-        acquiredKey = 1;
-        return 20.;
-    }
-    if(getAgentTileData()==LOCK && hasKey())
-    {
-        success = 1;
-        return 100.;
-    }
-    return 0.;
-}
-
-distanceClear state::getDistanceClear(bool b)
-{
-    int agentY = this->agentY;
-    int agentX = this->agentX;
-    if(b)
-    {
-        agentY = currentGoal.y;
-        agentX = currentGoal.x;
-        if(agentX>totalSize||agentX<0)
-            agentX = 0;
-        if(agentY>totalSize||agentY<0)
-            agentY = 0;
-            
-    }
-    
-//Top
-    distanceClear ret;
-
-    if(agentY<2)
-    {
-        if(agentY==1&&upActor==WALL)
-            ret.up = 0;
-        else ret.up = agentY;
-    }
-    else if(upActor==WALL)
-        ret.up = 0;
-    else if(info[agentY-2][agentX]==WALL)
-        ret.up = 1;
-    else ret.up = 2;
-
-//Bottom
-    if(agentY>totalSize-3)
-    {
-        if(agentY==totalSize-2&&downActor==WALL)
-            ret.down = 0;
-        else ret.down = totalSize-agentY-1;
-    }
-    else if(downActor==WALL)
-        ret.down = 0;
-    else if(info[agentY+2][agentX]==WALL)
-        ret.down = 1;
-    else ret.down = 2;
-
-//Left side
-    if(agentX<2)
-    {
-        if(agentX==1&&leftActor==WALL)
-            ret.left = 0;
-        else ret.left = agentX;
-    }
-    else if(leftActor==WALL)
-        ret.left = 0;
-    else if(info[agentY][agentX-2]==WALL)
-        ret.left = 1;
-    else ret.left = 2;
-
-//Right Side
-    if(agentX>totalSize-3)
-    {
-        if(agentX==totalSize-2&&rightActor==WALL)
-            ret.right = 0;
-        else ret.right = totalSize-agentX-1;
-    }
-    else if(rightActor==WALL)
-        ret.right = 0;
-    else if(info[agentY][agentX+2]==WALL)
-        ret.right = 1;
-    else ret.right = 2;
-
-
-    return ret;
-}
