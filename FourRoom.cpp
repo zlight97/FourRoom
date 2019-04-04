@@ -194,18 +194,18 @@ void populateGoalChunkList(list<Chunk> &lst,const state &s)
 void RunSimulation(bool verbose, bool end)
 {
 
-    // double finished_percentage = .99;
-    int number_of_trials = 5;
-    int steps_per_trial = 500000;
+    double finished_percentage = .99;
+    int number_of_trials = 10000;
+    int steps_per_trial = 500;
 
     //this block holds the settings for the success window
-    // int window_size = 20;//this will succed with higher values, though it will take a longer time
-    // double goodness = 0.;
-    // int goodness_index = 0;
-    // int window[window_size];
-    // int q; //counter for sliding window
-    // for(q=0;q<window_size;q++) //initilizing window
-    //     window[q]=0;
+    int window_size = 20;//this will succed with higher values, though it will take a longer time
+    double goodness = 0.;
+    int goodness_index = 0;
+    int window[window_size];
+    int q; //counter for sliding window
+    for(q=0;q<window_size;q++) //initilizing window
+        window[q]=0;
 
     int lower_wm_size = 1;
     int upper_wm_size = 1;
@@ -296,10 +296,14 @@ void RunSimulation(bool verbose, bool end)
         bool stepComplete = 0;
         for(int step = 0; step<steps_per_trial;step++)
         {
-            if(current_state.goalReached()||current_state.getSteps()>100)
+            if(current_state.goalReached())
+            {
+                break;
+            }
+            if(/*current_state.goalReached()||*/current_state.getSteps()>steps_per_trial)
             {
                 populateGoalChunkList(cannidate_goals,current_state);
-                cout<<"UPPER GOALS# "<<cannidate_goals.size()<<" Steps: "<<current_state.getSteps()<<endl;
+                // cout<<"UPPER GOALS# "<<cannidate_goals.size()<<" Steps: "<<current_state.getSteps()<<endl;
                 WMU.tickEpisodeClock(cannidate_goals);
                 if(WMU.getNumberOfChunks()==0)
                 {
@@ -367,8 +371,34 @@ void RunSimulation(bool verbose, bool end)
             //     break;
             
         }
-        cout<<"FINAL MAP OF TRIAL: "<<trial<<endl<<"SUCESS: "<<current_state.getSuccess()<<" KEY: "<<current_state.hasKey()<<endl;
-        printMap(current_state);
+
+        cout<<trial<< " ";
+        if (current_state.goalReached()) {
+			window[goodness_index++] = 1;
+			for (q = 0; q < window_size; q++)
+				goodness += (double) window[q];
+			goodness /= (double) window_size;
+
+			cout << "1 " << goodness << endl;
+		}
+		else {
+			window[goodness_index++] = 0;
+			for (q = 0; q < window_size; q++)
+				goodness += (double) window[q];
+			goodness /= (double) window_size;
+
+			cout << "0 " << goodness << endl;
+		}
+
+		if (goodness_index == window_size)
+			goodness_index = 0;
+
+		// If we are performing as well as we want, then we're finished.
+		if (goodness >= finished_percentage) {
+			break;
+        }
+        // cout<<"FINAL MAP OF TRIAL: "<<trial<<endl<<"SUCESS: "<<current_state.getSuccess()<<" KEY: "<<current_state.hasKey()<<endl;
+        // printMap(current_state);
     }
 	WMU.saveNetwork("./ending_network_upper.dat");
 	WML.saveNetwork("./ending_network_lower.dat");
@@ -404,7 +434,7 @@ double lowerRewardFunction(WorkingMemory& wm)
     if(current_state->getAgentX()==g.x && current_state->getAgentY()==g.y && !current_state->goalReached())
     {
         current_state->atGoal();
-        cout<<"REACHD GOAL!!! at: "<<current_state->getSteps()<<"\n";
+        // cout<<"REACHD GOAL!!! at: "<<current_state->getSteps()<<"\n";
         current_state->resetSteps();
         return 50.;
     }
@@ -438,7 +468,7 @@ void upperStateFunction(FeatureVector& fv, WorkingMemory& wm)
     fv.setValue(x,1.);
     fv.setValue(y,1.);
     distanceClear c = current_state->getDistanceClear(0);
-    //DIAGNOLS are not yet implemnted - this cant handle that I don't think
+    
     if(c.left>=1)
         fv.setValue(x-1,.6);
     if(c.left>=2)
@@ -466,7 +496,7 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
     fv.setValue(x,1.);
     fv.setValue(y,1.);
     distanceClear c = current_state->getDistanceClear(0);
-    //DIAGNOLS are not yet implemnted - this cant handle that I don't think
+    
     if(c.left>=1)
         fv.setValue(x-1,.6);
     if(c.left>=2)

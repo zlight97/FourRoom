@@ -1,4 +1,5 @@
 #include "State.h"
+#include <climits>
 
 //State Class Functions:
 void state::initState()
@@ -53,9 +54,9 @@ void state::initState()
     
     acquiredKey = 0;
     success = 0;
-    reachedGoal = 1;
+    reachedGoal = 0;
     hitWall = 0;
-    steps = 101;
+    steps = INT_MAX;
 }
 
 bool state::moveUp()
