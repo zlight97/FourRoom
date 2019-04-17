@@ -14,7 +14,7 @@ string getTileName(Tile t);
 //Prints the map in cout
 void printMap(state s);
 
-void populateMoveChunkList(list<Chunk> &lst);
+void populateMoveChunkList(list<Chunk> &lst, const state &s);
 void populateGoalChunkList(list<Chunk> &lst,const state &s);
 
 //Both AI

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <vector>
+#include <AggregateFeatureVector.h>
 
 //macros that simplified writting the state class
 
@@ -96,27 +97,39 @@ void printMap(state s)
     }
 }
 
-void populateMoveChunkList(list<Chunk> &lst)
+void populateMoveChunkList(list<Chunk> &lst, const state &s)
 {
     lst.clear();
     Chunk ch;
     ch.setType("MOVE");
+    distanceClear dist = s.getDistanceClear(0);
     Direction *d = new Direction();
-    *d = UP;
-    ch.setData(d);
-    lst.push_back(ch);
-    d = new Direction();
-    *d = DOWN;
-    ch.setData(d);
-    lst.push_back(ch);
-    d = new Direction();
-    *d = LEFT;
-    ch.setData(d);
-    lst.push_back(ch);
-    d = new Direction();
-    *d = RIGHT;
-    ch.setData(d);
-    lst.push_back(ch);
+    if(dist.up>0)
+    {
+        *d = UP;
+        ch.setData(d);
+        lst.push_back(ch);
+    }
+    if(dist.down>0)
+    {
+        d = new Direction();
+        *d = DOWN;
+        ch.setData(d);
+        lst.push_back(ch);
+    }
+    if(dist.left>0)
+    {        d = new Direction();
+        *d = LEFT;
+        ch.setData(d);
+        lst.push_back(ch);
+    }
+    if(dist.right>0)
+    {
+        d = new Direction();
+        *d = RIGHT;
+        ch.setData(d);
+        lst.push_back(ch);
+    }
 }
 
 void populateGoalChunkList(list<Chunk> &lst,const state &s)
@@ -195,9 +208,9 @@ void RunSimulation(bool verbose, bool end)
 {
 
     double finished_percentage = .99;
-    int number_of_trials = 10000;
-    int steps_per_trial = 500;
-
+    int number_of_trials = 100000;
+    int steps_per_trial = 100;
+    double largestGoodness = 0.;
     //this block holds the settings for the success window
     int window_size = 20;//this will succed with higher values, though it will take a longer time
     double goodness = 0.;
@@ -290,6 +303,13 @@ void RunSimulation(bool verbose, bool end)
         current_state.initState();
     for(int trial = 0; trial<number_of_trials; trial++)
     {
+        // if(trial%2000==0&&trial!=0)
+        // {
+        //     // exploration_percentage -=.8;
+	    //     // WML.setExplorationPercentage(exploration_percentage);
+        //     lrate += .01;
+        //     WML.getCriticNetwork()->setLearningRate(lrate);
+        // }
         WMU.newEpisode();
         WML.newEpisode();
         current_state.initState();
@@ -327,41 +347,9 @@ void RunSimulation(bool verbose, bool end)
             }
             
 
-            populateMoveChunkList(cannidate_directions);
+            populateMoveChunkList(cannidate_directions,current_state);
             WML.tickEpisodeClock(cannidate_directions);
-            if(WML.getNumberOfChunks()==0)
-            {
-                step--;
-                continue;
-            }
-            else
-            {
-                stepComplete=0;
-                direction_chunk = WML.getChunk(0);
-                if(direction_chunk.getType()=="MOVE")
-                {
-                    Direction* d = (Direction*)direction_chunk.getData();
-                    switch(*d)
-                    {
-                        case UP:
-                        current_state.step();
-                        current_state.hitWall = !current_state.moveUp();
-                        break;
-                        case DOWN:
-                        current_state.step();
-                        current_state.hitWall = !current_state.moveDown();
-                        break;
-                        case LEFT:
-                        current_state.step();
-                        current_state.hitWall = !current_state.moveLeft();
-                        break;
-                        case RIGHT:
-                        current_state.step();
-                        current_state.hitWall = !current_state.moveRight();
-                        break;
-                    }
-                }
-            }
+            
             if(verbose)
             {
                 printMap(current_state);
@@ -380,6 +368,7 @@ void RunSimulation(bool verbose, bool end)
 			goodness /= (double) window_size;
 
 			cout << "1 " << goodness << endl;
+
 		}
 		else {
 			window[goodness_index++] = 0;
@@ -393,13 +382,16 @@ void RunSimulation(bool verbose, bool end)
 		if (goodness_index == window_size)
 			goodness_index = 0;
 
+        if(goodness>largestGoodness)
+            largestGoodness = goodness;
 		// If we are performing as well as we want, then we're finished.
 		if (goodness >= finished_percentage) {
-			break;
+			// break;
         }
         // cout<<"FINAL MAP OF TRIAL: "<<trial<<endl<<"SUCESS: "<<current_state.getSuccess()<<" KEY: "<<current_state.hasKey()<<endl;
         // printMap(current_state);
     }
+    cout<<"Best Goodness in "<<window_size<<" window size is: "<<largestGoodness<<"\nFinal Map is:\n";
 	WMU.saveNetwork("./ending_network_upper.dat");
 	WML.saveNetwork("./ending_network_lower.dat");
     printMap(current_state);
@@ -428,9 +420,43 @@ double lowerRewardFunction(WorkingMemory& wm)
 
     if(wm.getNumberOfChunks()==0)
     {
-        // cout<<"NO CHUNKS!\n";
-        return -100.;//teach it quickly to keep a move chunk in memory
+        // step--;
+        // continue;
+        return -100.;
     }
+    else
+    {
+        Chunk direction_chunk = wm.getChunk(0);
+        if(direction_chunk.getType()=="MOVE")
+        {
+            Direction* d = (Direction*)direction_chunk.getData();
+            switch(*d)
+            {
+                case UP:
+                current_state->step();
+                current_state->hitWall = !current_state->moveUp();
+                break;
+                case DOWN:
+                current_state->step();
+                current_state->hitWall = !current_state->moveDown();
+                break;
+                case LEFT:
+                current_state->step();
+                current_state->hitWall = !current_state->moveLeft();
+                break;
+                case RIGHT:
+                current_state->step();
+                current_state->hitWall = !current_state->moveRight();
+                break;
+            }
+        }
+    }
+
+    // if(wm.getNumberOfChunks()==0)
+    // {
+    //     // cout<<"NO CHUNKS!\n";
+    //     return -100.;//teach it quickly to keep a move chunk in memory
+    // }
     if(current_state->getAgentX()==g.x && current_state->getAgentY()==g.y && !current_state->goalReached())
     {
         current_state->atGoal();

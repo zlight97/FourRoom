@@ -37,20 +37,20 @@ void state::initState()
     }
     //DOORS GO HERE
     //Left
-    info.at(roomSize+1)[2] = EMPTY;
-    info.at(roomSize)[2] = EMPTY;
+    // info.at(roomSize+1)[2] = EMPTY;
+    // info.at(roomSize)[2] = EMPTY;
 
-    //right
-    info.at(roomSize+1)[roomSize+2] = EMPTY;
-    info.at(roomSize)[roomSize+2] = EMPTY;
+    // //right
+    // info.at(roomSize+1)[roomSize+2] = EMPTY;
+    // info.at(roomSize)[roomSize+2] = EMPTY;
 
-    //top
-    info.at(1.)[roomSize+1] = EMPTY;
-    info.at(1)[roomSize] = EMPTY;
+    // //top
+    // info.at(1.)[roomSize+1] = EMPTY;
+    // info.at(1)[roomSize] = EMPTY;
 
-    //bottom
-    info.at(roomSize+5)[roomSize+1] = EMPTY;
-    info.at(roomSize+5)[roomSize] = EMPTY;
+    // //bottom
+    // info.at(roomSize+5)[roomSize+1] = EMPTY;
+    // info.at(roomSize+5)[roomSize] = EMPTY;
     
     acquiredKey = 0;
     success = 0;
@@ -214,7 +214,7 @@ double state::checkLocation()
     return 0.;
 }
 
-distanceClear state::getDistanceClear(bool b)
+distanceClear state::getDistanceClear(bool b) const
 {
     int agentY = this->agentY;
     int agentX = this->agentX;
