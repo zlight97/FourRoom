@@ -104,32 +104,33 @@ void populateMoveChunkList(list<Chunk> &lst, const state &s)
     ch.setType("MOVE");
     distanceClear dist = s.getDistanceClear(0);
     Direction *d = new Direction();
-    if(dist.up>0)
-    {
+    // if(dist.up>0)
+    // {
         *d = UP;
         ch.setData(d);
         lst.push_back(ch);
-    }
-    if(dist.down>0)
-    {
+    // }
+    // if(dist.down>0)
+    // {
         d = new Direction();
         *d = DOWN;
         ch.setData(d);
         lst.push_back(ch);
-    }
-    if(dist.left>0)
-    {        d = new Direction();
+    // }
+    // if(dist.left>0)
+    // {
+        d = new Direction();
         *d = LEFT;
         ch.setData(d);
         lst.push_back(ch);
-    }
-    if(dist.right>0)
-    {
+    // }
+    // if(dist.right>0)
+    // {
         d = new Direction();
         *d = RIGHT;
         ch.setData(d);
         lst.push_back(ch);
-    }
+    // }
 }
 
 void populateGoalChunkList(list<Chunk> &lst,const state &s)
@@ -225,12 +226,12 @@ void RunSimulation(bool verbose, bool end)
     int lower_chunk_feature_vector_size = 4;
     int upper_chunk_feature_vector_size = 2*totalSize;
     int upper_state_feature_vector_size = 2*totalSize;
-    int lower_state_feature_vector_size = 48;
+    int lower_state_feature_vector_size = 2*totalSize;
     //these values go for both
     double lrate = .01;
     double lambda = 0.;//.7;
     double ngamma = .99;
-    double exploration_percentage = .05;
+    double exploration_percentage = .01;
     OR_CODE or_code = NOISY_OR;
     state current_state;//this is the state data-type
 
@@ -518,53 +519,34 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
     fv.clearVector();
     state *current_state =(state*) wm.getStateDataStructure();
     int x = current_state->getAgentX();
-    int y = current_state->getAgentY()+totalSize;//total size should be the offset needed
-    fv.setValue(x,1.);
-    fv.setValue(y,1.);
+    int y = current_state->getAgentY();//total size should be the offset needed
+    
     distanceClear c = current_state->getDistanceClear(0);
-    
-    if(c.left>=1)
-        fv.setValue(x-1,.6);
-    if(c.left>=2)
-        fv.setValue(x-2,.3);
-    if(c.right>=1)
-        fv.setValue(x+1,.6);
-    if(c.right>=2)
-        fv.setValue(x+2,.3);
-    if(c.up>=1)
-        fv.setValue(y-1,.6);
-    if(c.up>=2)
-        fv.setValue(y-2,.3);
-    if(c.down>=1)
-        fv.setValue(y+1,.6);
-    if(c.down>=2)
-        fv.setValue(y+2,.3);
-    //end identical part
-    
 
-    x = (2*totalSize) + current_state->getCurrentGoal().x;
-    y = (3*totalSize) + current_state->getCurrentGoal().y;
-    fv.setValue(x,1.);
-    fv.setValue(y,1.);
-    c = current_state->getDistanceClear(1);
+    int dx = current_state->getCurrentGoal().x;
+    int dy = current_state->getCurrentGoal().y;
+    int px = totalSize+x-dx;
+    int py = totalSize+totalSize+y-dy;
+    c = current_state->getDistanceClear(px/2,(py-totalSize)/2);
+    fv.setValue(px,1.);
+    fv.setValue(py,1.);
     
-    if(c.left>=1)
-        fv.setValue(x-1,.6);
-    if(c.left>=2)
-        fv.setValue(x-2,.3);
-    if(c.right>=1)
-        fv.setValue(x+1,.6);
-    if(c.right>=2)
-        fv.setValue(x+2,.3);
-    if(c.up>=1)
-        fv.setValue(y-1,.6);
-    if(c.up>=2)
-        fv.setValue(y-2,.3);
-    if(c.down>=1)
-        fv.setValue(y+1,.6);
-    if(c.down>=2)
-        fv.setValue(y+2,.3);
-
+    // if(c.left>=1)
+    //     fv.setValue(px-1,.6);
+    // if(c.left>=2)
+    //     fv.setValue(px-2,.3);
+    // if(c.right>=1)
+    //     fv.setValue(px+1,.6);
+    // if(c.right>=2)
+    //     fv.setValue(px+2,.3);
+    // if(c.up>=1)
+    //     fv.setValue(py-1,.6);
+    // if(c.up>=2)
+    //     fv.setValue(py-2,.3);
+    // if(c.down>=1)
+    //     fv.setValue(py+1,.6);
+    // if(c.down>=2)
+        // fv.setValue(py+2,.3);
 }
 
 void upperChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)

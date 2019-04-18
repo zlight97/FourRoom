@@ -69,6 +69,7 @@ public:
     bool moveLeft();
     bool moveRight();
     distanceClear getDistanceClear(bool b) const;
+    distanceClear getDistanceClear(int x, int y) const;
     double checkLocation();
     int getAgentX() const{ return agentX; }
     int getAgentY() const{ return agentY; }

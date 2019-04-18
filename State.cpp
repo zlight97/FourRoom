@@ -57,6 +57,8 @@ void state::initState()
     reachedGoal = 0;
     hitWall = 0;
     steps = INT_MAX;
+    currentGoal.x = 0;
+    currentGoal.y = 0;
 }
 
 bool state::moveUp()
@@ -228,6 +230,70 @@ distanceClear state::getDistanceClear(bool b) const
             agentY = 0;
             
     }
+    
+//Top
+    distanceClear ret;
+
+    if(agentY<2)
+    {
+        if(agentY==1&&upActor==WALL)
+            ret.up = 0;
+        else ret.up = agentY;
+    }
+    else if(upActor==WALL)
+        ret.up = 0;
+    else if(info[agentY-2][agentX]==WALL)
+        ret.up = 1;
+    else ret.up = 2;
+
+//Bottom
+    if(agentY>totalSize-3)
+    {
+        if(agentY==totalSize-2&&downActor==WALL)
+            ret.down = 0;
+        else ret.down = totalSize-agentY-1;
+    }
+    else if(downActor==WALL)
+        ret.down = 0;
+    else if(info[agentY+2][agentX]==WALL)
+        ret.down = 1;
+    else ret.down = 2;
+
+//Left side
+    if(agentX<2)
+    {
+        if(agentX==1&&leftActor==WALL)
+            ret.left = 0;
+        else ret.left = agentX;
+    }
+    else if(leftActor==WALL)
+        ret.left = 0;
+    else if(info[agentY][agentX-2]==WALL)
+        ret.left = 1;
+    else ret.left = 2;
+
+//Right Side
+    if(agentX>totalSize-3)
+    {
+        if(agentX==totalSize-2&&rightActor==WALL)
+            ret.right = 0;
+        else ret.right = totalSize-agentX-1;
+    }
+    else if(rightActor==WALL)
+        ret.right = 0;
+    else if(info[agentY][agentX+2]==WALL)
+        ret.right = 1;
+    else ret.right = 2;
+
+
+    return ret;
+}
+
+distanceClear state::getDistanceClear(int x, int y) const
+{
+    int agentY = x;
+    int agentX = y;
+
     
 //Top
     distanceClear ret;
