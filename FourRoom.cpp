@@ -25,20 +25,7 @@ using namespace std;
  * 
  * 
  * Questions for later
- * Is there a better way to represent the state vector for the lower level, how should it know where the destination is / maybe upper level?
- * ^Yes, both as two x,y vectors -> x,y,x`,y`
- * Should I force the Upper AI to choose a new goal each time (within range? Limit possibilities?)
- * ^Give a step limit to select new
- * Should I teach the lower to move and then just load it every time? (How should I represent goals in Feature Vector)
- * ^Not a bad idea, same as above
- * How should I be feeding chunks to the AI
- * ^this is fine. Give the upper all valid chunks
- * Is this implementation a tick late?
- * ^Maybe test more
- * Along with that, it appears that the upper-level doesn't get it's reward fuction called
- * ^Test more
- * Should wmtk paramaters be changed
- * ^Changed lambda to 0
+ * 
  */
 int goalCount = 0;
 string getTileName(Tile t)
@@ -177,31 +164,31 @@ void populateGoalChunkList(list<Chunk> &lst,const state &s)
     // int lB = s.getAgentX()-roomSize/2;
     // lB = lB >=0? lB : 0;
     // int uB = s.getAgentY()-roomSize/2;
-    // uB = uB >=0? lB : 0;    
+    // uB = uB >=0? uB : 0;
     // int rB = s.getAgentX()+roomSize/2;
     // rB = rB <totalSize? rB : totalSize-1;
     // int dB = s.getAgentY()+roomSize/2;
     // dB = dB <totalSize? dB : totalSize-1;
     // for(int i = uB; i<dB; i++)
-    // for(int i = 0; i<totalSize; i++)
-    // {
-    //     // for(int j = lB; j<rB;j++)
-    //     for(int j = 0; j<totalSize; j++)
-    //     {
-    //         if(s.info.at(i)[j]!=WALL&&s.info.at(i)[j]!=AGENT)
-    //         {
-    //             Goal *g = new Goal();
-    //             g->x = j; g->y = i;
-    //             ch.setData(g);
-    //             lst.push_back(ch);
-    //         }
-    //     }
-    // }
-
+    for(int i = 0; i<totalSize; i++)
+    {
+        // for(int j = lB; j<rB;j++)
+        for(int j = 0; j<totalSize; j++)
+        {
+            if(s.info.at(i)[j]!=WALL&&s.info.at(i)[j]!=AGENT)
+            {
                 Goal *g = new Goal();
-                g->x = rand()%totalSize; g->y = rand()%totalSize;
+                g->x = j; g->y = i;
                 ch.setData(g);
                 lst.push_back(ch);
+            }
+        }
+    }
+
+                // Goal *g = new Goal();
+                // g->x = rand()%totalSize; g->y = rand()%totalSize;
+                // ch.setData(g);
+                // lst.push_back(ch);
 
 }
 
@@ -210,7 +197,7 @@ void RunSimulation(bool verbose, bool end)
 
     double finished_percentage = .99;
     int number_of_trials = 100000;
-    int steps_per_trial = 100;
+    int steps_per_trial = 1000;
     double largestGoodness = 0.;
     //this block holds the settings for the success window
     int window_size = 20;//this will succed with higher values, though it will take a longer time
@@ -263,7 +250,7 @@ void RunSimulation(bool verbose, bool end)
 	WMU.setExplorationPercentage(exploration_percentage);
 
     	// Use learning rate
-	WML.getCriticNetwork()->setLearningRate(lrate);
+	WML.getCriticNetwork()->setLearningRate(0.001);
 
 	/// Use lambda (eligibility discount rate)
 	WML.getCriticNetwork()->setLambda(lambda);
@@ -272,7 +259,7 @@ void RunSimulation(bool verbose, bool end)
 	WML.getCriticNetwork()->setGamma(ngamma);
 
 	// Use exploration percentage (chance it does something random)
-	WML.setExplorationPercentage(exploration_percentage);
+	WML.setExplorationPercentage(.01);
 
     Chunk direction_chunk;
     Chunk goalChunk;
@@ -282,8 +269,9 @@ void RunSimulation(bool verbose, bool end)
 
 	WMU.saveNetwork("./starting_network_upper.dat");
 
-	WML.saveNetwork("./starting_network_lower.dat");
-    
+	// WML.saveNetwork("./starting_network_lower.dat");
+    WML.loadNetwork("./lowerAI.dat");
+
     // char c = '1';
     // while(c!='0')
     // {
@@ -317,11 +305,11 @@ void RunSimulation(bool verbose, bool end)
         bool stepComplete = 0;
         for(int step = 0; step<steps_per_trial;step++)
         {
-            if(current_state.goalReached())
-            {
-                break;
-            }
-            if(/*current_state.goalReached()||*/current_state.getSteps()>steps_per_trial)
+            // if(current_state.goalReached())
+            // {
+            //     break;
+            // }
+            if(current_state.goalReached()||current_state.getSteps()>stateStepAllowance)
             {
                 populateGoalChunkList(cannidate_goals,current_state);
                 // cout<<"UPPER GOALS# "<<cannidate_goals.size()<<" Steps: "<<current_state.getSteps()<<endl;
@@ -356,19 +344,19 @@ void RunSimulation(bool verbose, bool end)
                 printMap(current_state);
                 cout<<endl;
             }
-            // if(current_state.getSuccess())
-            //     break;
+            if(current_state.getSuccess())
+                break;
             
         }
 
         cout<<trial<< " ";
-        if (current_state.goalReached()) {
+        if (current_state.getSuccess()) {
 			window[goodness_index++] = 1;
 			for (q = 0; q < window_size; q++)
 				goodness += (double) window[q];
 			goodness /= (double) window_size;
 
-			cout << "1 " << goodness << endl;
+			cout << "1 " << goodness;
 
 		}
 		else {
@@ -377,9 +365,9 @@ void RunSimulation(bool verbose, bool end)
 				goodness += (double) window[q];
 			goodness /= (double) window_size;
 
-			cout << "0 " << goodness << endl;
+			cout << "0 " << goodness;
 		}
-
+        cout<<" "<<current_state.hasKey()<<endl;
 		if (goodness_index == window_size)
 			goodness_index = 0;
 
@@ -387,7 +375,7 @@ void RunSimulation(bool verbose, bool end)
             largestGoodness = goodness;
 		// If we are performing as well as we want, then we're finished.
 		if (goodness >= finished_percentage) {
-			// break;
+			break;
         }
         // cout<<"FINAL MAP OF TRIAL: "<<trial<<endl<<"SUCESS: "<<current_state.getSuccess()<<" KEY: "<<current_state.hasKey()<<endl;
         // printMap(current_state);
@@ -477,14 +465,11 @@ double lowerRewardFunction(WorkingMemory& wm)
  * This is layed out in a manner that should give a spread based on available options
  * 1 is where we are, .6 is where we can move .3 is where we can move in 2 moves
  * Shown by this graphic:
- * 0  0 .3  0  0
- * 0 .3 .6 .3  0
+ *      .3 
+ *      .6 
  *.3 .6  1 .6 .3
- * 0 .3 .6 .3  0
- * 0  0 .3  0  0
- * 
- * currently the representation is and x choord y choord, concat onto their end
- * This may need to change to a 2d array though this would be really inefficent
+ *      .6 
+ *      .3
  */
 void upperStateFunction(FeatureVector& fv, WorkingMemory& wm)
 {
@@ -531,22 +516,22 @@ void lowerStateFunction(FeatureVector& fv, WorkingMemory& wm)
     fv.setValue(px,1.);
     fv.setValue(py,1.);
     
-    // if(c.left>=1)
-    //     fv.setValue(px-1,.6);
-    // if(c.left>=2)
-    //     fv.setValue(px-2,.3);
-    // if(c.right>=1)
-    //     fv.setValue(px+1,.6);
-    // if(c.right>=2)
-    //     fv.setValue(px+2,.3);
-    // if(c.up>=1)
-    //     fv.setValue(py-1,.6);
-    // if(c.up>=2)
-    //     fv.setValue(py-2,.3);
-    // if(c.down>=1)
-    //     fv.setValue(py+1,.6);
-    // if(c.down>=2)
-        // fv.setValue(py+2,.3);
+    if(c.left>=1)
+        fv.setValue(px-1,.6);
+    if(c.left>=2)
+        fv.setValue(px-2,.3);
+    if(c.right>=1)
+        fv.setValue(px+1,.6);
+    if(c.right>=2)
+        fv.setValue(px+2,.3);
+    if(c.up>=1)
+        fv.setValue(py-1,.6);
+    if(c.up>=2)
+        fv.setValue(py-2,.3);
+    if(c.down>=1)
+        fv.setValue(py+1,.6);
+    if(c.down>=2)
+        fv.setValue(py+2,.3);
 }
 
 void upperChunkFunction(FeatureVector& fv, Chunk& chk, WorkingMemory& wm)
@@ -600,7 +585,3 @@ void deleteChunkFunction(Chunk& chk)
         cerr<<"**ERROR** Unidentified chunk attempting to be deleted!\n";
     }
 }
-
-
-
-

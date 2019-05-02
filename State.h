@@ -23,6 +23,8 @@ const int keyY = totalSize-roomSize;
 const int lockX = 4;
 const int lockY = totalSize-2;
 
+const int stateStepAllowance = 100;
+
 
 //Each tile has a type dicated by this enum
 enum Tile

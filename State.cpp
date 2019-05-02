@@ -15,9 +15,9 @@ void state::initState()
         info.push_back(vector<Tile>());
         for(int j = 0; j<totalSize;j++)
         {
-            // if(j == totalSize/2 || j==(totalSize/2)-1||i == totalSize/2 || i==(totalSize/2)-1)
-            //     info.at(i).push_back(WALL);
-            // else
+            if(j == totalSize/2 || j==(totalSize/2)-1||i == totalSize/2 || i==(totalSize/2)-1)
+                info.at(i).push_back(WALL);
+            else
                 info.at(i).push_back(EMPTY);
         }
     }
@@ -37,20 +37,20 @@ void state::initState()
     }
     //DOORS GO HERE
     //Left
-    // info.at(roomSize+1)[2] = EMPTY;
-    // info.at(roomSize)[2] = EMPTY;
+    info.at(roomSize+1)[2] = EMPTY;
+    info.at(roomSize)[2] = EMPTY;
 
     // //right
-    // info.at(roomSize+1)[roomSize+2] = EMPTY;
-    // info.at(roomSize)[roomSize+2] = EMPTY;
+    info.at(roomSize+1)[roomSize+2] = EMPTY;
+    info.at(roomSize)[roomSize+2] = EMPTY;
 
     // //top
-    // info.at(1.)[roomSize+1] = EMPTY;
-    // info.at(1)[roomSize] = EMPTY;
+    info.at(1.)[roomSize+1] = EMPTY;
+    info.at(1)[roomSize] = EMPTY;
 
     // //bottom
-    // info.at(roomSize+5)[roomSize+1] = EMPTY;
-    // info.at(roomSize+5)[roomSize] = EMPTY;
+    info.at(roomSize+5)[roomSize+1] = EMPTY;
+    info.at(roomSize+5)[roomSize] = EMPTY;
     
     acquiredKey = 0;
     success = 0;
@@ -208,11 +208,15 @@ double state::checkLocation()
         acquiredKey = 1;
         return 20.;
     }
-    if(getAgentTileData()==LOCK && hasKey())
+    else if(getAgentTileData()==LOCK && hasKey())
     {
         success = 1;
         return 100.;
     }
+    // else if(getSteps()>stateStepAllowance)
+    // {
+    //     return -50.;
+    // }
     return 0.;
 }
 
