@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <vector>
 
+//these #defines just make some checks look cleaner later on
 #define atActor info.at(agentY)[agentX]
 #define upActor info.at(agentY-1)[agentX]
 #define downActor info.at(agentY+1)[agentX]
@@ -61,6 +62,7 @@ struct distanceClear
 };
 
 //This holds all of the state data that is used to determine what is currently happening
+//it also allows for the control from the lower level, and goal management from the upper
 class state
 {
 public:

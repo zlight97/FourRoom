@@ -2,14 +2,18 @@
 #include <climits>
 
 //State Class Functions:
+
+//this sets up the starting state of a new run
 void state::initState()
 {
+    //we clear all data if it exists
     for(int i = 0; i<info.size();i++)
     {
         info.at(i).clear();
     }
     if(info.size()>0)
         info.clear();
+    //this creates the grid inside the 2d vector and adds all walls in their correct spot, no opening so far
     for(int i = 0; i<totalSize; i++)
     {
         info.push_back(vector<Tile>());
@@ -21,8 +25,10 @@ void state::initState()
                 info.at(i).push_back(EMPTY);
         }
     }
+    //sets the position of lock and key
     info.at(lockY)[lockX] = LOCK;
     info.at(keyY)[keyX] = KEY;
+    //generates a valid space for the actor to start
     while(true)
     {   
         int r1 = rand()%totalSize;
@@ -52,6 +58,7 @@ void state::initState()
     info.at(roomSize+5)[roomSize+1] = EMPTY;
     info.at(roomSize+5)[roomSize] = EMPTY;
     
+    //set other variables
     acquiredKey = 0;
     success = 0;
     reachedGoal = 0;
@@ -60,7 +67,7 @@ void state::initState()
     currentGoal.x = 0;
     currentGoal.y = 0;
 }
-
+//moves up
 bool state::moveUp()
 {
     if(agentY==0)
@@ -93,7 +100,7 @@ bool state::moveUp()
     agentY--;
     return 1;
 }
-
+//moves down
 bool state::moveDown()
 {
     if(agentY==totalSize-1)
@@ -127,7 +134,7 @@ bool state::moveDown()
     agentY++;
     return 1;
 }
-
+//moves left
 bool state::moveLeft()
 {
     if(agentX==0)
@@ -159,7 +166,7 @@ bool state::moveLeft()
     agentX--;
     return 1;
 }
-
+//moves right
 bool state::moveRight()
 {
     if(agentX==totalSize-1)
@@ -192,6 +199,7 @@ bool state::moveRight()
     return 1;
 }
 
+//check's what was initially at a square, used to assist in the 4 move functions
 Tile state::getAgentTileData()
 {
     if(agentX==lockX&&agentY==lockY)
@@ -201,6 +209,7 @@ Tile state::getAgentTileData()
     return EMPTY;
 }
 
+//this is the reward metric for the upper level AI
 double state::checkLocation()
 {//this will be used to determine the given reward to the upper level while updating state info
     if(getAgentTileData() == KEY && !hasKey())
@@ -213,13 +222,11 @@ double state::checkLocation()
         success = 1;
         return 100.;
     }
-    // else if(getSteps()>stateStepAllowance)
-    // {
-    //     return -50.;
-    // }
     return 0.;
 }
 
+//checks how far you can move in each direction and returns a 4 int struct
+//if b is false we check where the agent is, if true we check where the goal is
 distanceClear state::getDistanceClear(bool b) const
 {
     int agentY = this->agentY;
@@ -293,6 +300,7 @@ distanceClear state::getDistanceClear(bool b) const
     return ret;
 }
 
+//checks how far you can move in each direction and returns a 4 int struct
 distanceClear state::getDistanceClear(int x, int y) const
 {
     int agentY = x;

@@ -14,6 +14,7 @@ string getTileName(Tile t);
 //Prints the map in cout
 void printMap(state s);
 
+//these create the list of valid chunks for each AI to choose from
 void populateMoveChunkList(list<Chunk> &lst, const state &s);
 void populateGoalChunkList(list<Chunk> &lst,const state &s);
 

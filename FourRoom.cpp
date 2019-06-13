@@ -5,8 +5,6 @@
 #include <vector>
 #include <AggregateFeatureVector.h>
 
-//macros that simplified writting the state class
-
 using namespace std;
 
 /*
@@ -23,8 +21,6 @@ using namespace std;
  * Needs to learn how to navigate to waypoints dicated by higher level
  * State function is the same as higher level? Maybe chould be changed to incorperate waypoints, but I'm not sure how that would work
  * 
- * 
- * Questions for later
  * 
  */
 int goalCount = 0;
@@ -91,6 +87,7 @@ void populateMoveChunkList(list<Chunk> &lst, const state &s)
     ch.setType("MOVE");
     distanceClear dist = s.getDistanceClear(0);
     Direction *d = new Direction();
+    //uncommenting these if's will make the lower level unable to move into walls
     // if(dist.up>0)
     // {
         *d = UP;
@@ -127,52 +124,9 @@ void populateGoalChunkList(list<Chunk> &lst,const state &s)
     ch.setType("GOAL");
     int agentX = s.getAgentX();
     int agentY = s.getAgentY();
-    // if(goalCount<100)
-    // {
-    //     cout<<"goalCountINC\n";
-    //     goalCount++;
-    //     if(s.getAgentX()>0&&s.leftActor!=WALL)
-    //     {
-    //         Goal *g = new Goal();
-    //         g->x = s.getAgentX()-1; g->y = s.getAgentY();
-    //         ch.setData(g);
-    //         lst.push_back(ch);
-    //     }
-    //     if(s.getAgentX()<totalSize-1&&s.rightActor!=WALL)
-    //     {
-    //         Goal *g = new Goal();
-    //         g->x = s.getAgentX()+1; g->y = s.getAgentY();
-    //         ch.setData(g);
-    //         lst.push_back(ch);
-    //     }
-    //     if(s.getAgentY()>0&&s.upActor!=WALL)
-    //     {
-    //         Goal *g = new Goal();
-    //         g->x = s.getAgentX(); g->y = s.getAgentY()-1;
-    //         ch.setData(g);
-    //         lst.push_back(ch);
-    //     }
-    //     if(s.getAgentY()<totalSize-1&&s.downActor!=WALL)
-    //     {
-    //         Goal *g = new Goal();
-    //         g->x = s.getAgentX(); g->y = s.getAgentY()+1;
-    //         ch.setData(g);
-    //         lst.push_back(ch);
-    //     }
-    //     return;
-    // }
-    // int lB = s.getAgentX()-roomSize/2;
-    // lB = lB >=0? lB : 0;
-    // int uB = s.getAgentY()-roomSize/2;
-    // uB = uB >=0? uB : 0;
-    // int rB = s.getAgentX()+roomSize/2;
-    // rB = rB <totalSize? rB : totalSize-1;
-    // int dB = s.getAgentY()+roomSize/2;
-    // dB = dB <totalSize? dB : totalSize-1;
-    // for(int i = uB; i<dB; i++)
+    //this selects all squares that the actor are not on, and are not walls
     for(int i = 0; i<totalSize; i++)
     {
-        // for(int j = lB; j<rB;j++)
         for(int j = 0; j<totalSize; j++)
         {
             if(s.info.at(i)[j]!=WALL&&s.info.at(i)[j]!=AGENT)
@@ -184,12 +138,6 @@ void populateGoalChunkList(list<Chunk> &lst,const state &s)
             }
         }
     }
-
-                // Goal *g = new Goal();
-                // g->x = rand()%totalSize; g->y = rand()%totalSize;
-                // ch.setData(g);
-                // lst.push_back(ch);
-
 }
 
 void RunSimulation(bool verbose, bool end)
@@ -272,6 +220,7 @@ void RunSimulation(bool verbose, bool end)
 	// WML.saveNetwork("./starting_network_lower.dat");
     WML.loadNetwork("./lowerAI.dat");
 
+    //this comment allows for manual control
     // char c = '1';
     // while(c!='0')
     // {
@@ -289,16 +238,10 @@ void RunSimulation(bool verbose, bool end)
     //         current_state.moveRight();
     // }
 
-        current_state.initState();
+    current_state.initState();
     for(int trial = 0; trial<number_of_trials; trial++)
     {
-        // if(trial%2000==0&&trial!=0)
-        // {
-        //     // exploration_percentage -=.8;
-	    //     // WML.setExplorationPercentage(exploration_percentage);
-        //     lrate += .01;
-        //     WML.getCriticNetwork()->setLearningRate(lrate);
-        // }
+
         WMU.newEpisode();
         WML.newEpisode();
         current_state.initState();
@@ -349,6 +292,8 @@ void RunSimulation(bool verbose, bool end)
             
         }
 
+
+        //this generates a running average of a window size, this uses a sliding window, and automatically ends the program if we reach a success rate of finished_percentage
         cout<<trial<< " ";
         if (current_state.getSuccess()) {
 			window[goodness_index++] = 1;
@@ -394,10 +339,6 @@ double upperRewardFunction(WorkingMemory& wm)
     double d = current_state->checkLocation();//could be a better way to lay this out
     if(d<0&&wm.getNumberOfChunks()==0)//this is to quickly teach it to keep a chunk in memory
         return -100.;
-    if(d>0)
-    {
-        // cout<<"REWARD UPPER!?!\n";
-    }
     return d;
 }
 
@@ -440,12 +381,6 @@ double lowerRewardFunction(WorkingMemory& wm)
             }
         }
     }
-
-    // if(wm.getNumberOfChunks()==0)
-    // {
-    //     // cout<<"NO CHUNKS!\n";
-    //     return -100.;//teach it quickly to keep a move chunk in memory
-    // }
     if(current_state->getAgentX()==g.x && current_state->getAgentY()==g.y && !current_state->goalReached())
     {
         current_state->atGoal();
@@ -453,11 +388,11 @@ double lowerRewardFunction(WorkingMemory& wm)
         current_state->resetSteps();
         return 50.;
     }
-    if(current_state->hitWall)
-    {
+    // if(current_state->hitWall)
+    // {
         // cout<<"HIT WALL*\n";
-        return -5.;
-    }
+    //     return -5.;
+    // }
     return -1.;
 }
 

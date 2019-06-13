@@ -3,6 +3,7 @@
 
 using namespace std;
 
+//this really just calls the main function in FourRoom, but it allows for passing of some variables to determine logging, and never ending
 int main(int argc, char* argv[])
 {
 
